@@ -23,9 +23,13 @@ import {
   getTransformer,
   getTransformCode,
   showTransformer,
+  getDiffResult,
+  getDiffer,
+  showDiffer,
 } from './selectors';
 
 function* save(fork, storageAdapter) {
+  // debugger
   let action = 'new_revision';
   let [
     revision,
@@ -35,6 +39,9 @@ function* save(fork, storageAdapter) {
     transformCode,
     transformer,
     showTransformPanel,
+    diffCode,
+    differ,
+    showDiffPanel,
   ] = yield [
     select(getRevision),
     select(getParser),
@@ -43,11 +50,14 @@ function* save(fork, storageAdapter) {
     select(getTransformCode),
     select(getTransformer),
     select(showTransformer),
+    select(getDiffResult),
+    select(getDiffer),
+    select(showDiffer),
   ];
   if (fork || !revision) {
     action = fork ? 'fork' : 'create';
   }
-
+  // debugger
   const data = {
     parserID: parser.id,
     settings: {
@@ -63,6 +73,11 @@ function* save(fork, storageAdapter) {
     data.toolID = transformer.id;
     data.versions[transformer.id] = transformer.version;
     data.transform = transformCode;
+  }
+  if (showDiffPanel && differ) {
+    data.toolID = differ.id;
+    data.versions[differ.id] = differ.version;
+    data.diff = diffCode;
   }
 
   logEvent('snippet', action, data.toolID);

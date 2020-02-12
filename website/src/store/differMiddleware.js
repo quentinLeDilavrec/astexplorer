@@ -1,15 +1,16 @@
-import {getParser, getParserSettings, getCode} from './selectors';
+import {getParser, getParserSettings, getCode, getDiffer, getDiffCode} from './selectors';
 import {ignoreKeysFilter, locationInformationFilter, functionFilter, emptyKeysFilter, typeKeysFilter} from '../core/TreeAdapter.js';
 
-function parse(parser, code, parserSettings) {
-  if (!parser._promise) {
-    parser._promise = new Promise(parser.loadParser);
+function diff(differ, oldCode, newCode, parserSettings) {
+  if (!differ._promise) {
+    differ._promise = new Promise(differ.loadDiffer);
   }
-  return parser._promise.then(
-    realParser => parser.parse(
-      realParser,
-      code,
-      parserSettings || parser.getDefaultOptions(),
+  return differ._promise.then(
+    realDiffer => differ.diff(
+      realDiffer,
+      oldCode,
+      newCode,
+      // parserSettings || differ.getDefaultOptions(), // TODO add settings
     ),
   );
 }
@@ -19,25 +20,26 @@ export default store => next => action => {
   next(action);
   const newState = store.getState();
 
-  const newParser = getParser(newState);
-  const newParserSettings = getParserSettings(newState);
-  const newCode = getCode(newState);
-
+  const newDiffer = getDiffer(newState);
+  const newParserSettings = getParserSettings(newState); // TODO get settings
+  const newCode = getCode(newState); 
+  const oldCode = getDiffCode(newState);
+  debugger
   if (
     action.type === 'INIT' ||
-    getParser(oldState) !== newParser ||
+    getParser(oldState) !== newDiffer ||
     getParserSettings(oldState) !== newParserSettings ||
     getCode(oldState) !== newCode
   ) {
-    if (!newParser || newCode == null) {
+    if (!newDiffer || newCode == null) {
       return;
     }
     const start = Date.now();
-    return parse(newParser, newCode, newParserSettings).then(
+    return diff(newDiffer, oldCode, newCode, newParserSettings).then(
       ast => {
         // Did anything change in the meantime?
         if (
-          newParser !== getParser(store.getState()) ||
+          newDiffer !== getParser(store.getState()) ||
           newParserSettings !== getParserSettings(store.getState()) ||
           newCode !== getCode(store.getState())
         ) {
@@ -47,21 +49,21 @@ export default store => next => action => {
         const treeAdapter = {
           type: 'default',
           options: {
-            openByDefault: (newParser.opensByDefault || (() => false)).bind(newParser),
-            nodeToRange: newParser.nodeToRange.bind(newParser),
-            nodeToName: newParser.getNodeName.bind(newParser),
-            walkNode: newParser.forEachProperty.bind(newParser),
+            openByDefault: (newDiffer.opensByDefault || (() => false)).bind(newDiffer),
+            nodeToRange: newDiffer.nodeToRange.bind(newDiffer),
+            nodeToName: newDiffer.getNodeName.bind(newDiffer),
+            walkNode: newDiffer.forEachProperty.bind(newDiffer),
             filters: [
-              ignoreKeysFilter(newParser._ignoredProperties),
+              ignoreKeysFilter(newDiffer._ignoredProperties),
               functionFilter(),
               emptyKeysFilter(),
-              locationInformationFilter(newParser.locationProps),
-              typeKeysFilter(newParser.typeProps),
+              locationInformationFilter(newDiffer.locationProps),
+              typeKeysFilter(newDiffer.typeProps),
             ],
           },
         };
         next({
-          type: 'SET_PARSE_RESULT', // TODO duplicate into diffMidleware?
+          type: 'SET_DIFF_RESULT', // TODO duplicate into diffMidleware?
           result: {
             time: Date.now() - start,
             ast: ast,
@@ -73,7 +75,7 @@ export default store => next => action => {
       error => {
         console.error(error); // eslint-disable-line no-console
         next({
-          type: 'SET_PARSE_RESULT',
+          type: 'SET_DIFF_RESULT',
           result: {
             time: null,
             ast: null,

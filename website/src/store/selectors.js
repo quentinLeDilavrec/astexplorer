@@ -1,6 +1,6 @@
 import {createSelector} from 'reselect';
 import isEqual from 'lodash.isequal';
-import {getParserByID, getTransformerByID} from '../parsers';
+import {getParserByID, getTransformerByID, getDifferByID} from '../parsers';
 
 // UI related
 
@@ -129,10 +129,43 @@ const didParserSettingsChange = createSelector(
   },
 );
 
+// Diff related
+
+export function getDiffResult(state) {
+  return state.workbench.diffResult;
+}
+
+export function getDiffCode(state) {
+  return state.workbench.diff.code;
+}
+
+export function getInitialDiffCode(state) {
+  return state.workbench.diff.initialCode;
+}
+
+export function getDiffer(state) {
+  console.log(87, state)
+  return getDifferByID(state.workbench.diff.differ);
+}
+
+export function showDiffer(state) {
+  return state.showDiffPanel;
+}
+
+const isDiffDirty = createSelector(
+  [getDiffCode, getInitialDiffCode],
+  (code, initialCode) => code !== initialCode,
+);
+
+export const canSaveDiff = createSelector(
+  [showDiffer, isDiffDirty],
+  (showDiffer, dirty) => showDiffer && dirty,
+);
+
 export const canSave = createSelector(
-  [getRevision, canSaveCode, canSaveTransform, didParserSettingsChange],
-  (revision, canSaveCode, canSaveTransform, didParserSettingsChange) => (
-    (canSaveCode || canSaveTransform || didParserSettingsChange) &&
+  [getRevision, canSaveCode, canSaveTransform, canSaveDiff, didParserSettingsChange],
+  (revision, canSaveCode, canSaveTransform, canSaveDiff, didParserSettingsChange) => (
+    (canSaveCode || canSaveTransform || canSaveDiff || didParserSettingsChange) &&
     (!revision || revision.canSave())
   ),
 );

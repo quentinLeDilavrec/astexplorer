@@ -6,6 +6,8 @@ import {
   openShareDialog,
   selectTransformer,
   hideTransformer,
+  selectDiffer,
+  hideOld,
   setParser,
   reset,
   setKeyMap,
@@ -25,8 +27,10 @@ function mapStateToProps(state) {
     category: parser.category,
     parser,
     transformer: selectors.getTransformer(state),
+    differ: selectors.getDiffer(state),
     keyMap: selectors.getKeyMap(state),
     showTransformer: selectors.showTransformer(state),
+    showDiffer: selectors.showDiffer(state),
     snippet: selectors.getRevision(state),
   };
 }
@@ -50,9 +54,17 @@ function mapDispatchToProps(dispatch) {
       logEvent('ui', 'open_share');
     },
     onTransformChange: transformer => {
+      // debugger
       dispatch(transformer ? selectTransformer(transformer) : hideTransformer());
       if (transformer) {
         logEvent('tool', 'select', transformer.id);
+      }
+    },
+    onOldChange: old => {
+      // debugger
+      dispatch(old ? selectDiffer(old) : hideOld());
+      if (old) {
+        logEvent('tool', 'select', old.id);
       }
     },
     onKeyMapChange: keyMap => {

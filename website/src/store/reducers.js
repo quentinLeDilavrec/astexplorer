@@ -1,5 +1,5 @@
 import * as actions from './actions';
-import {getCategoryByID, getDefaultParser, getParserByID, getTransformerByID} from '../parsers';
+import { getCategoryByID, getDefaultParser, getParserByID, getTransformerByID } from '../parsers';
 
 const defaultParser = getDefaultParser(getCategoryByID('javascript'));
 
@@ -14,6 +14,7 @@ const initialState = {
   cursor: null,
   error: null,
   showTransformPanel: false,
+  showDiffPanel: false,
 
   // Snippet related state
   selectedRevision: null,
@@ -38,6 +39,11 @@ const initialState = {
       initialCode: '',
       transformer: null,
     },
+    diff: {
+      code: '',
+      initialCode: '',
+      differ: null,
+    },
   },
 
   enableFormatting: false,
@@ -49,10 +55,11 @@ const initialState = {
  */
 export function persist(state) {
   return {
-    ...pick(state, 'showTransformPanel', 'parserSettings', 'parserPerCategory'),
+    ...pick(state, 'showTransformPanel', 'showDiffPanel', 'parserSettings', 'parserPerCategory'),
     workbench: {
       ...pick(state.workbench, 'parser', 'code', 'keyMap'),
       transform: pick(state.workbench.transform, 'code', 'transformer'),
+      diff: pick(state.workbench.diff, 'code', 'differ'),
     },
   };
 }
@@ -61,7 +68,7 @@ export function persist(state) {
  * When read from persistent storage, set the last stored code as initial version.
  * This is necessary because we use CodeMirror as an uncontrolled component.
  */
-export function revive(state=initialState) {
+export function revive(state = initialState) {
   return {
     ...state,
     workbench: {
@@ -72,11 +79,17 @@ export function revive(state=initialState) {
         ...state.workbench.transform,
         initialCode: state.workbench.transform.code,
       },
+      diff: {
+        ...state.workbench.diff,
+        initialCode: state.workbench.diff.code,
+      },
     },
   };
 }
 
-export function astexplorer(state=initialState, action) {
+export function astexplorer(state = initialState, action) {
+  console.log(46, state, action)
+  // debugger
   return {
     // UI related state
     showSettingsDialog: showSettingsDialog(state.showSettingsDialog, action),
@@ -87,6 +100,7 @@ export function astexplorer(state=initialState, action) {
     cursor: cursor(state.cursor, action),
     error: error(state.error, action),
     showTransformPanel: showTransformPanel(state.showTransformPanel, action),
+    showDiffPanel: showDiffPanel(state.showDiffPanel, action),
 
     // Snippet related state
     activeRevision: activeRevision(state.activeRevision, action),
@@ -99,12 +113,12 @@ export function astexplorer(state=initialState, action) {
   };
 }
 
-function format(state=initialState.enableFormatting, action) {
+function format(state = initialState.enableFormatting, action) {
   if (action.type === actions.TOGGLE_FORMATTING) return !state;
   return state;
 }
 
-function workbench(state=initialState.workbench, action, fullState) {
+function workbench(state = initialState.workbench, action, fullState) {
   function parserFromCategory(category) {
     const parser = fullState.parserPerCategory[category.id] ||
       getDefaultParser(category).id;
@@ -115,6 +129,8 @@ function workbench(state=initialState.workbench, action, fullState) {
       initialCode: category.codeExample,
     };
   }
+
+  console.log(47, action)
 
   switch (action.type) {
     case actions.SELECT_CATEGORY:
@@ -130,12 +146,14 @@ function workbench(state=initialState.workbench, action, fullState) {
         initialCode: action.text,
       };
     case actions.SET_PARSE_RESULT:
-      return {...state, parseResult: action.result};
+      return { ...state, parseResult: action.result };
+    case actions.SET_DIFF_RESULT:
+      return { ...state, diffResult: action.result };
     case actions.SET_PARSER_SETTINGS:
-      return {...state, parserSettings: action.settings};
+      return { ...state, parserSettings: action.settings };
     case actions.SET_PARSER:
       {
-        const newState = {...state, parser: action.parser.id};
+        const newState = { ...state, parser: action.parser.id };
         if (action.parser !== state.parser) {
           // Update parser settings
           newState.parserSettings =
@@ -144,19 +162,21 @@ function workbench(state=initialState.workbench, action, fullState) {
         return newState;
       }
     case actions.SET_CODE:
-      return {...state, code: action.code};
+      return { ...state, code: action.code };
     case actions.SELECT_TRANSFORMER:
       {
+        // debugger
+
         const differentParser =
           action.transformer.defaultParserID !== state.parser;
         const differentTransformer =
-          action.transformer.id !== state.transform.transformer ;
+          action.transformer.id !== state.transform.transformer;
 
         if (!(differentParser || differentTransformer)) {
           return state;
         }
 
-        const newState = {...state};
+        const newState = { ...state };
 
         if (differentParser) {
           newState.parser = action.transformer.defaultParserID;
@@ -181,6 +201,43 @@ function workbench(state=initialState.workbench, action, fullState) {
 
         return newState;
       }
+    case actions.SELECT_DIFFER:
+      {
+        // debugger
+        // const differentParser =
+        // action.differ.defaultParserID !== state.parser;
+        const differentDiffer =
+          action.differ.id !== state.diff.differ;
+
+        if (!(differentDiffer)) {
+          return state;
+        }
+
+        const newState2 = { ...state };
+
+        // if (differentParser) {
+        //   newState.parser = action.differ.defaultParserID;
+        //   newState.parserSettings =
+        //     fullState.parserSettings[action.differ.defaultParserID] || null;
+        // }
+        if (differentDiffer) {
+          const snippetHasDifferentDiff = fullState.activeRevision &&
+            fullState.activeRevision.getDifferID() === action.differ.id;
+          console.log(44, snippetHasDifferentDiff, state.diff.code, action.differ.defaultDiff)
+          newState2.diff = {
+            ...state.diff,
+            differ: action.differ.id,
+            code: snippetHasDifferentDiff ?
+              (state.diff.code === undefined ? newState2.code : state.diff.code) :
+              (action.differ.defaultDiff === undefined ? newState2.code : action.differ.defaultDiff),
+            initialCode: snippetHasDifferentDiff ?
+              fullState.activeRevision.getDiffCode() :
+              action.differ.defaultDiff,
+          };
+        }
+
+        return newState2;
+      }
     case actions.SET_TRANSFORM:
       return {
         ...state,
@@ -189,11 +246,20 @@ function workbench(state=initialState.workbench, action, fullState) {
           code: action.code,
         },
       };
+    case actions.SET_OLD:
+      return {
+        ...state,
+        diff: {
+          ...state.diff,
+          code: action.code,
+        },
+      };
     case actions.SET_SNIPPET:
       {
-        const {revision} = action;
+        const { revision } = action;
 
         const transformerID = revision.getTransformerID();
+        const differID = revision.getDifferID();
         const parserID = revision.getParserID();
 
         return {
@@ -204,9 +270,17 @@ function workbench(state=initialState.workbench, action, fullState) {
           initialCode: revision.getCode(),
           transform: {
             ...state.transform,
+            ...state.diff,
             transformer: transformerID,
+            differ: differID,
             code: revision.getTransformCode(),
             initialCode: revision.getTransformCode(),
+          },
+          diff: {
+            ...state.diff,
+            differ: differID,
+            code: revision.getDiffCode(),
+            initialCode: revision.getDiffCode(),
           },
         };
       }
@@ -229,16 +303,27 @@ function workbench(state=initialState.workbench, action, fullState) {
             initialCode: transformer.defaultTransform,
           };
         }
+        console.log(32, action)
+        // debugger;
+        if (fullState.activeRevision && fullState.activeRevision.getDifferID() || reset && state.diff.differ) {
+          // Clear transform as well
+          const differ = getDifferByID(state.diff.differ);
+          newState.diff = {
+            ...state.diff,
+            code: differ.defaultTransform,
+            initialCode: differ.defaultTransform,
+          };
+        }
         return newState;
       }
     case actions.SET_KEY_MAP:
-      return {...state, keyMap: action.keyMap};
+      return { ...state, keyMap: action.keyMap };
     default:
       return state;
   }
 }
 
-function parserSettings(state=initialState.parserSettings, action, fullState) {
+function parserSettings(state = initialState.parserSettings, action, fullState) {
   switch (action.type) {
     case actions.SET_PARSER_SETTINGS:
       if (fullState.activeRevision) {
@@ -255,17 +340,17 @@ function parserSettings(state=initialState.parserSettings, action, fullState) {
   }
 }
 
-function parserPerCategory(state=initialState.parserPerCategory, action) {
+function parserPerCategory(state = initialState.parserPerCategory, action) {
   switch (action.type) {
     case actions.SET_PARSER:
-      return {...state, [action.parser.category.id]: action.parser.id};
+      return { ...state, [action.parser.category.id]: action.parser.id };
     default:
       return state;
   }
 }
 
-function showSettingsDialog(state=initialState.showSettingsDialog, action) {
-  switch(action.type) {
+function showSettingsDialog(state = initialState.showSettingsDialog, action) {
+  switch (action.type) {
     case actions.OPEN_SETTINGS_DIALOG:
       return true;
     case actions.CLOSE_SETTINGS_DIALOG:
@@ -275,8 +360,8 @@ function showSettingsDialog(state=initialState.showSettingsDialog, action) {
   }
 }
 
-function showShareDialog(state=initialState.showShareDialog, action) {
-  switch(action.type) {
+function showShareDialog(state = initialState.showShareDialog, action) {
+  switch (action.type) {
     case actions.OPEN_SHARE_DIALOG:
       return true;
     case actions.CLOSE_SHARE_DIALOG:
@@ -286,8 +371,8 @@ function showShareDialog(state=initialState.showShareDialog, action) {
   }
 }
 
-function loadSnippet(state=initialState.loadingSnippet, action) {
-  switch(action.type) {
+function loadSnippet(state = initialState.loadingSnippet, action) {
+  switch (action.type) {
     case actions.START_LOADING_SNIPPET:
       return true;
     case actions.DONE_LOADING_SNIPPET:
@@ -297,8 +382,8 @@ function loadSnippet(state=initialState.loadingSnippet, action) {
   }
 }
 
-function saving(state=initialState.saving, action) {
-  switch(action.type) {
+function saving(state = initialState.saving, action) {
+  switch (action.type) {
     case actions.START_SAVE:
       return !action.fork;
     case actions.END_SAVE:
@@ -308,8 +393,8 @@ function saving(state=initialState.saving, action) {
   }
 }
 
-function forking(state=initialState.forking, action) {
-  switch(action.type) {
+function forking(state = initialState.forking, action) {
+  switch (action.type) {
     case actions.START_SAVE:
       return action.fork;
     case actions.END_SAVE:
@@ -319,8 +404,8 @@ function forking(state=initialState.forking, action) {
   }
 }
 
-function cursor(state=initialState.cursor, action) {
-  switch(action.type) {
+function cursor(state = initialState.cursor, action) {
+  switch (action.type) {
     case actions.SET_CURSOR:
       return action.cursor;
     case actions.SET_CODE:
@@ -339,7 +424,7 @@ function cursor(state=initialState.cursor, action) {
   }
 }
 
-function error(state=initialState.error, action) {
+function error(state = initialState.error, action) {
   switch (action.type) {
     case actions.SET_ERROR:
       return action.error;
@@ -350,7 +435,8 @@ function error(state=initialState.error, action) {
   }
 }
 
-function showTransformPanel(state=initialState.showTransformPanel, action) {
+function showTransformPanel(state = initialState.showTransformPanel, action) {
+  // debugger
   switch (action.type) {
     case actions.SELECT_TRANSFORMER:
       return true;
@@ -365,7 +451,22 @@ function showTransformPanel(state=initialState.showTransformPanel, action) {
   }
 }
 
-function activeRevision(state=initialState.selectedRevision, action) {
+function showDiffPanel(state = initialState.showDiffPanel, action) {
+  switch (action.type) {
+    case actions.SELECT_DIFFER:
+      return true;
+    case actions.HIDE_OLD:
+    case actions.SELECT_CATEGORY:
+    case actions.CLEAR_SNIPPET:
+      return false;
+    case actions.SET_SNIPPET:
+      return Boolean(action.revision.getDifferID());
+    default:
+      return state;
+  }
+}
+
+function activeRevision(state = initialState.selectedRevision, action) {
   switch (action.type) {
     case actions.SET_SNIPPET:
       return action.revision;

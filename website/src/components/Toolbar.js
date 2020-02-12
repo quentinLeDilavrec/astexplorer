@@ -5,11 +5,13 @@ import ParserButton from './buttons/ParserButton';
 import SnippetButton from './buttons/SnippetButton';
 import TransformButton from './buttons/TransformButton';
 import KeyMapButton from './buttons/KeyMapButton';
+import EvolveButton from './buttons/EvolveButton';
 
 export default function Toolbar(props) {
-  let {parser, transformer, showTransformer} = props;
+  let {parser, transformer, differ, showTransformer, showDiffer} = props;
   let parserInfo = parser.displayName;
   let transformerInfo = '';
+  let differInfo = '';
   if (parser) {
     if (parser.version) {
       parserInfo += '-' + parser.version;
@@ -28,7 +30,19 @@ export default function Toolbar(props) {
       transformerInfo =
         <a href={transformer.homepage} target="_blank" rel="noopener noreferrer">{transformerInfo}</a>;
     }
-    transformerInfo = <span>Transformer: {transformerInfo}</span>;
+    transformerInfo = <div>Transformer: {transformerInfo}</div>;
+  }
+
+  if (showDiffer) {
+    differInfo = differ.displayName;
+    if (differ.version) {
+      differInfo += '-' + differ.version;
+    }
+    if (differ.homepage) {
+      differInfo =
+        <a href={differ.homepage} target="_blank" rel="noopener noreferrer">{differInfo}</a>;
+    }
+    differInfo = <div>Differ: {differInfo}</div>;
   }
 
   return (
@@ -38,6 +52,7 @@ export default function Toolbar(props) {
       <CategoryButton {...props} />
       <ParserButton {...props} />
       <TransformButton {...props} />
+      <EvolveButton {...props} />
       <KeyMapButton {...props} />
       <a
         style={{minWidth: 0}}
@@ -46,9 +61,10 @@ export default function Toolbar(props) {
         href="https://github.com/fkling/astexplorer/blob/master/README.md">
         <i className="fa fa-lg fa-question fa-fw" />
       </a>
-      <div id="info" className={transformerInfo ? 'small' : ''}>
-        Parser: {parserInfo}<br />
+      <div id="info" className={transformerInfo || differInfo ? 'small' : ''}>
+      <div>Parser: {parserInfo}</div>
         {transformerInfo}
+        {differInfo}
       </div>
     </div>
   );
@@ -67,6 +83,7 @@ Toolbar.propTypes = {
   parser: PropTypes.object,
   transformer: PropTypes.object,
   showTransformer: PropTypes.bool,
+  showDiffer: PropTypes.bool,
   canSave: PropTypes.bool,
   canFork: PropTypes.bool,
 };
