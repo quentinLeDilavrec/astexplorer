@@ -17,7 +17,7 @@ export default {
 
   loadParser(callback) {
     const url = PARSER_SERVICE_URL;
-    callback(function name(code) {
+    callback(function spoonParsingHandler(code) {
       const Http = new XMLHttpRequest();
       Http.open("GET", url+'?code='+btoa(code));
       Http.send();

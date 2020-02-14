@@ -3,6 +3,7 @@ import DiffOutput from '../components/DiffOutput';
 import * as selectors from '../store/selectors';
 
 function mapStateToProps(state) {
+  console.log(55,state)
   return {
     // parseResult: selectors.getParseResult(state),
     position: selectors.getCursor(state),

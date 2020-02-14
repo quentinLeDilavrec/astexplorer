@@ -1,5 +1,5 @@
 import * as actions from './actions';
-import { getCategoryByID, getDefaultParser, getParserByID, getTransformerByID } from '../parsers';
+import { getCategoryByID, getDefaultParser, getParserByID, getTransformerByID, getDifferByID } from '../parsers';
 
 const defaultParser = getDefaultParser(getCategoryByID('javascript'));
 
@@ -130,7 +130,7 @@ function workbench(state = initialState.workbench, action, fullState) {
     };
   }
 
-  console.log(47, action)
+  // console.log(47, action)
 
   switch (action.type) {
     case actions.SELECT_CATEGORY:
@@ -223,7 +223,7 @@ function workbench(state = initialState.workbench, action, fullState) {
         if (differentDiffer) {
           const snippetHasDifferentDiff = fullState.activeRevision &&
             fullState.activeRevision.getDifferID() === action.differ.id;
-          console.log(44, snippetHasDifferentDiff, state.diff.code, action.differ.defaultDiff)
+          // console.log(44, snippetHasDifferentDiff, state.diff.code, action.differ.defaultDiff)
           newState2.diff = {
             ...state.diff,
             differ: action.differ.id,
@@ -249,9 +249,10 @@ function workbench(state = initialState.workbench, action, fullState) {
     case actions.SET_OLD:
       return {
         ...state,
+        code: action.code,
         diff: {
           ...state.diff,
-          code: action.code,
+          code: action.oldcode,
         },
       };
     case actions.SET_SNIPPET:
@@ -267,12 +268,10 @@ function workbench(state = initialState.workbench, action, fullState) {
           parser: parserID,
           parserSettings: revision.getParserSettings() || fullState.parserSettings[parserID] || null,
           code: revision.getCode(),
-          initialCode: revision.getCode(),
+          initialCode: revision.getCode(),// || 'let x = 3',
           transform: {
             ...state.transform,
-            ...state.diff,
             transformer: transformerID,
-            differ: differID,
             code: revision.getTransformCode(),
             initialCode: revision.getTransformCode(),
           },
@@ -303,7 +302,7 @@ function workbench(state = initialState.workbench, action, fullState) {
             initialCode: transformer.defaultTransform,
           };
         }
-        console.log(32, action)
+        // console.log(32, action)
         // debugger;
         if (fullState.activeRevision && fullState.activeRevision.getDifferID() || reset && state.diff.differ) {
           // Clear transform as well

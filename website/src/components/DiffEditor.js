@@ -1,6 +1,6 @@
 import CodeMirror from 'codemirror';
-import 'codemirror/keymap/vim';
 import 'codemirror/addon/merge/merge';
+import 'codemirror/keymap/vim';
 import 'codemirror/keymap/emacs';
 import 'codemirror/keymap/sublime';
 import PropTypes from 'prop-types';
@@ -17,20 +17,60 @@ const defaultPrettierOptions = {
   parser: 'babylon',
 };
 
-export default class Editor extends React.Component {
+// import { MonacoDiffEditor } from 'react-monaco-editor';
+
+// export default class DiffEditor extends React.Component {
+
+//   constructor(props) {
+//     super(props);
+//     this.state = {
+//       value: props.value,
+//     };
+//   }
+
+//   render() {
+//     const code1 = "// your original code...";
+//     const code2 = "// a different version...\nlet a = 2;";
+//     const options = {
+//       //renderSideBySide: false
+//     };
+//     return (
+//       <MonacoDiffEditor
+//         // width="100%"
+//         // height="100%"
+//         // language="javascript"
+//         // theme="vs-dark"
+//         original={code1}
+//         value={code2}
+//         options={options}
+//       />
+//     );
+//   }
+// }
+
+export default class DiffEditor extends React.Component {
 
   constructor(props) {
     super(props);
     this.state = {
       value: props.value,
+      oldvalue: props.oldvalue,
+      mode: props.mode,
     };
   }
 
   UNSAFE_componentWillReceiveProps(nextProps) {
-    if (nextProps.value !== this.state.value) {
+    if (nextProps.value !== this.state.value ||
+      nextProps.oldvalue !== this.state.oldvalue) {
       this.setState(
-        {value: nextProps.value},
-        () => this.codeMirror.setValue(nextProps.value),
+        {
+          value: nextProps.value,
+          oldvalue: nextProps.oldvalue,
+        },
+        () => {
+          // this.codeMirror.editor().setValue(nextProps.value); // TODO usefull?
+
+        },
       );
     }
     if (nextProps.mode !== this.props.mode) {
@@ -53,6 +93,10 @@ export default class Editor extends React.Component {
     return this.codeMirror && this.codeMirror.getValue();
   }
 
+  getOldValue() {
+    return this.codeMirror && this.codeMirror.editor().state.diffViews[0].orig.getValue();
+  }
+
   _getErrorLine(error) {
     return error.loc ? error.loc.line : (error.lineNumber || error.line);
   }
@@ -63,14 +107,14 @@ export default class Editor extends React.Component {
       if (oldError) {
         let lineNumber = this._getErrorLine(oldError);
         if (lineNumber) {
-          this.codeMirror.removeLineClass(lineNumber-1, 'text', 'errorMarker');
+          this.codeMirror.removeLineClass(lineNumber - 1, 'text', 'errorMarker');
         }
       }
 
       if (error) {
         let lineNumber = this._getErrorLine(error);
         if (lineNumber) {
-          this.codeMirror.addLineClass(lineNumber-1, 'text', 'errorMarker');
+          this.codeMirror.editor().addLineClass(lineNumber - 1, 'text', 'errorMarker');
         }
       }
     }
@@ -81,9 +125,11 @@ export default class Editor extends React.Component {
   }
 
   componentDidMount() {
+
     this._CMHandlers = [];
     this._subscriptions = [];
-    this.codeMirror = CodeMirror( // eslint-disable-line new-cap
+    console.log(77, this.state.value)
+    this.codeMirror = CodeMirror.MergeView( // eslint-disable-line new-cap
       this.container,
       {
         keyMap: this.props.keyMap,
@@ -91,6 +137,11 @@ export default class Editor extends React.Component {
         mode: this.props.mode,
         lineNumbers: this.props.lineNumbers,
         readOnly: this.props.readOnly,
+        origLeft: this.state.oldvalue,
+        // orig: '0.0.0',
+        highlightDifferences: true,
+        // connect: "align",
+        collapseIdentical: false
       },
     );
 
@@ -121,7 +172,10 @@ export default class Editor extends React.Component {
     this._subscriptions.push(
       PubSub.subscribe('PANEL_RESIZE', () => {
         if (this.codeMirror) {
-          this.codeMirror.refresh();
+          console.log(7, this)
+          this.codeMirror.editor().refresh();
+          // this.codeMirror.left.forceUpdate()(this.state.mode)
+          // this.codeMirror.right.forceUpdate()(this.state.mode)
         }
       }),
     );
@@ -130,7 +184,7 @@ export default class Editor extends React.Component {
       this._markerRange = null;
       this._mark = null;
       this._subscriptions.push(
-        PubSub.subscribe('HIGHLIGHT', (_, {range}) => {
+        PubSub.subscribe('HIGHLIGHT', (_, { range }) => {
           if (!range) {
             return;
           }
@@ -148,11 +202,11 @@ export default class Editor extends React.Component {
           this._mark = this.codeMirror.markText(
             start,
             end,
-            {className: 'marked'},
+            { className: 'marked' },
           );
         }),
 
-        PubSub.subscribe('CLEAR_HIGHLIGHT', (_, {range}={}) => {
+        PubSub.subscribe('CLEAR_HIGHLIGHT', (_, { range } = {}) => {
           if (!range ||
             this._markerRange &&
             range[0] === this._markerRange[0] &&
@@ -185,43 +239,51 @@ export default class Editor extends React.Component {
 
   _bindCMHandler(event, handler) {
     this._CMHandlers.push(event, handler);
-    this.codeMirror.on(event, handler);
+    this.codeMirror.edit.on(event, handler);
   }
 
   _unbindHandlers() {
     const cmHandlers = this._CMHandlers;
     for (let i = 0; i < cmHandlers.length; i += 2) {
-      this.codeMirror.off(cmHandlers[i], cmHandlers[i+1]);
+      this.codeMirror.editor().off(cmHandlers[i], cmHandlers[i + 1]);
     }
     this._subscriptions.forEach(PubSub.unsubscribe);
   }
 
   _onContentChange() {
-    const doc = this.codeMirror.getDoc();
+    const doc = this.codeMirror.editor().getDoc();
+    // console.log(7534,this.codeMirror.editor().state.diffViews[0].orig)
     const args = {
       value: doc.getValue(),
+      oldvalue: this.codeMirror.editor().state.diffViews[0].orig.getValue(),
       cursor: doc.indexFromPos(doc.getCursor()),
     };
+    console.log(37,args)
+    // this.codeMirror.editor().state.diffViews[0].orig.setValue('fwefw\nwefew')
     this.setState(
-      {value: args.value},
-      () => this.props.onContentChange(args),
+      {
+        value: args.value,
+        oldvalue: args.oldvalue,
+      },
+      () => {
+        this.props.onContentChange(args)},
     );
   }
 
   _onActivity() {
     this.props.onActivity(
-      this.codeMirror.getDoc().indexFromPos(this.codeMirror.getCursor()),
+      this.codeMirror.editor().getDoc().indexFromPos(this.codeMirror.editor().getCursor()),
     );
   }
 
   render() {
     return (
-      <div className="editor" ref={c => this.container = c}/>
+      <div className="editor" ref={c => this.container = c} />
     );
   }
 }
 
-Editor.propTypes = {
+DiffEditor.propTypes = {
   value: PropTypes.string,
   highlight: PropTypes.bool,
   lineNumbers: PropTypes.bool,
@@ -235,13 +297,55 @@ Editor.propTypes = {
   keyMap: PropTypes.string,
 };
 
-Editor.defaultProps = {
+DiffEditor.defaultProps = {
   value: '',
   highlight: true,
   lineNumbers: true,
   readOnly: false,
   mode: 'javascript',
   keyMap: 'default',
-  onContentChange: () => {},
-  onActivity: () => {},
+  onContentChange: (x) => {},
+  onActivity: () => { },
 };
+
+
+
+
+// function toggleDifferences() {
+//   dv.setShowDifferences(highlight = !highlight);
+// }
+
+// window.onload = function() {
+//   value = document.documentElement.innerHTML;
+//   orig1 = "<!doctype html>\n\n" + value.replace(/\.\.\//g, "codemirror/").replace("yellow", "orange");
+//   orig2 = value.replace(/\u003cscript/g, "\u003cscript type=text/javascript ")
+//     .replace("white", "purple;\n      font: comic sans;\n      text-decoration: underline;\n      height: 15em");
+//   initUI();
+//   let d = document.createElement("div"); d.style.cssText = "width: 50px; margin: 7px; height: 14px"; dv.editor().addLineWidget(57, d)
+// };
+
+// function mergeViewHeight(mergeView) {
+//   function editorHeight(editor) {
+//     if (!editor) return 0;
+//     return editor.getScrollInfo().height;
+//   }
+//   return Math.max(editorHeight(mergeView.leftOriginal()),
+//                   editorHeight(mergeView.editor()),
+//                   editorHeight(mergeView.rightOriginal()));
+// }
+
+// function resize(mergeView) {
+//   var height = mergeViewHeight(mergeView);
+//   for(;;) {
+//     if (mergeView.leftOriginal())
+//       mergeView.leftOriginal().setSize(null, height);
+//     mergeView.editor().setSize(null, height);
+//     if (mergeView.rightOriginal())
+//       mergeView.rightOriginal().setSize(null, height);
+
+//     var newHeight = mergeViewHeight(mergeView);
+//     if (newHeight >= height) break;
+//     else height = newHeight;
+//   }
+//   mergeView.wrap.style.height = height + "px";
+// }

@@ -10,10 +10,25 @@ const webpack = require('webpack');
 const DEV = process.env.NODE_ENV !== 'production';
 const CACHE_BREAKER = Number(fs.readFileSync(path.join(__dirname, 'CACHE_BREAKER')));
 
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
+
 const plugins = [
+
+  new MonacoWebpackPlugin({
+    languages: ["typescript", "javascript", "css"],
+  }),
+  // new MonacoWebpackPlugin(
+  // {
+  //   // available options are documented at https://github.com/Microsoft/monaco-editor-webpack-plugin#options
+  //   // languages: ['json', 'javascript', 'java']
+  //   // languages: ['json', 'java']
+  //   // publicPath : '/'
+  // }
+  // ),
   new webpack.DefinePlugin({
     'process.env.API_HOST': JSON.stringify(process.env.API_HOST || ''),
   }),
+  // new webpack.IgnorePlugin(/^diff-match-patch$/),
   new webpack.IgnorePlugin(/\.md$/),
   new webpack.IgnorePlugin(/node\/nodeLoader.js/),
   // Usually babel-eslint tries to patch eslint, but we are using "parseNoPatch",
@@ -137,6 +152,9 @@ module.exports = Object.assign({
           /\/acorn.es.js$/,
           /\/acorn.mjs$/,
           /\/acorn-loose.mjs$/,
+          path.join(__dirname, 'node_modules', 'diff-match-patch', 'index.js'),
+          path.join(__dirname, 'node_modules', 'diff-match-patch', 'index'),
+          path.join(__dirname, 'node_modules', 'diff-match-patch'),
           path.join(__dirname, 'node_modules', '@glimmer', 'compiler', 'dist'),
           path.join(__dirname, 'node_modules', '@glimmer', 'syntax', 'dist'),
           path.join(__dirname, 'node_modules', '@glimmer', 'util', 'dist'),
@@ -171,6 +189,7 @@ module.exports = Object.assign({
           path.join(__dirname, 'node_modules', 'tslint'),
           path.join(__dirname, 'node_modules', 'tslib'),
           path.join(__dirname, 'node_modules', 'svelte'),
+          // path.join(__dirname, 'node_modules', 'monaco-editor/esm/'),
           path.join(__dirname, 'src'),
         ],
         loader: 'babel-loader',
@@ -212,11 +231,16 @@ module.exports = Object.assign({
         test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
         loader: 'file-loader',
       },
+      // {
+      //   test: /\.js$/,
+      //   include: 'diff-match-patch',
+      //   loader: 'script-loader'
+      // },
     ],
 
     noParse: [
       /traceur\/bin/,
-      /typescript\/lib/,
+      /(?<!language\/)typescript\/lib/,
       /acorn\/dist\/acorn\.js/,
       /acorn\/dist\/acorn\.mjs/,
       /esprima\/dist\/esprima\.js/,
@@ -240,6 +264,7 @@ module.exports = Object.assign({
   plugins: plugins,
 
   entry: {
+    'diff-match-patch': './node_modules/diff-match-patch/index.js',
     app: './src/app.js',
   },
 
@@ -250,9 +275,9 @@ module.exports = Object.assign({
   },
 },
 
-DEV ?
-  {
-    devtool: 'eval',
-  } :
-  {}
+  DEV ?
+    {
+      devtool: 'eval',
+    } :
+    {}
 );

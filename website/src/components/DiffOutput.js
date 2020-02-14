@@ -33,7 +33,7 @@ export default function DiffOutput({
         {
           React.createElement(
             visualizations[selectedOutput],
-            { diffAST, position },
+            { parseResult:diffAST, position },
           )
         }
       </ErrorBoundary>

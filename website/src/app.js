@@ -1,7 +1,9 @@
 import * as LocalStorage from './components/LocalStorage';
 import ASTOutputContainer from './containers/ASTOutputContainer';
 import CodeEditorContainer from './containers/CodeEditorContainer';
-import OldCodeContainer from './containers/OldCodeContainer';
+import CodeMMEditorContainer from './containers/CodeMMEditorContainer';
+
+import DiffCodeContainer from './containers/DiffCodeContainer';
 import DiffOutputContainer from './containers/DiffOutputContainer';
 import ErrorMessageContainer from './containers/ErrorMessageContainer';
 import GistBanner from './components/GistBanner';
@@ -32,12 +34,14 @@ import '../css/style.css';
 import parserMiddleware from './store/parserMiddleware';
 import differMiddleware from './store/differMiddleware';
 
+import 'diff-match-patch'
+
 function resize() {
   PubSub.publish('PANEL_RESIZE');
 }
 
 function App(props) {
-  console.log(98, props);
+  // console.log(98, props);
   // debugger
   return (
     <div>
@@ -54,12 +58,15 @@ function App(props) {
               className="splitpane-content"
               vertical={true}
               onResize={resize}>
-              <SplitPane
-                className="splitpane"
-                onResize={resize}>
-                {props.showDiffer ? <OldCodeContainer />  : <CodeEditorContainer />}
-                {props.showDiffer ? <CodeEditorContainer />  : <ASTOutputContainer />}
-              </SplitPane>
+              {props.showDiffer ?
+                <DiffCodeContainer /> :
+                <SplitPane
+                  className="splitpane"
+                  onResize={resize}>
+                  <CodeEditorContainer />
+                  <ASTOutputContainer />
+                </SplitPane>
+              }
               {props.showTransformer ? <TransformerContainer /> :
                 props.showDiffer ? <DiffOutputContainer /> :
                   null}

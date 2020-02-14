@@ -144,7 +144,6 @@ export function getInitialDiffCode(state) {
 }
 
 export function getDiffer(state) {
-  console.log(87, state)
   return getDifferByID(state.workbench.diff.differ);
 }
 

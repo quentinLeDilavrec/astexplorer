@@ -1,8 +1,17 @@
 @import "~codemirror/lib/codemirror.css";
+@import "~codemirror/addon/merge/merge.css";
 @import "~codemirror/addon/fold/foldgutter.css";
 @import "./highlight.css";
 @import "~font-awesome/css/font-awesome.css";
 @import "../fontcustom/fontcustom.css";
+
+.CodeMirror-merge, .CodeMirror-merge .CodeMirror {
+  height: 100%;
+}
+
+.CodeMirror-merge-2pane .CodeMirror-merge-pane {
+  height: 100%;
+}
 
 html {
   font-size: 14px;

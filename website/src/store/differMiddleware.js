@@ -24,7 +24,7 @@ export default store => next => action => {
   const newParserSettings = getParserSettings(newState); // TODO get settings
   const newCode = getCode(newState); 
   const oldCode = getDiffCode(newState);
-  debugger
+  // debugger
   if (
     action.type === 'INIT' ||
     getParser(oldState) !== newDiffer ||
@@ -38,11 +38,10 @@ export default store => next => action => {
     return diff(newDiffer, oldCode, newCode, newParserSettings).then(
       ast => {
         // Did anything change in the meantime?
-        if (
-          newDiffer !== getParser(store.getState()) ||
+        const cond = newDiffer !== getParser(store.getState()) ||
           newParserSettings !== getParserSettings(store.getState()) ||
           newCode !== getCode(store.getState())
-        ) {
+        if (false) { // TODO modify it
           return;
         }
         // Temporary adapter for parsers that haven't been migrated yet.
