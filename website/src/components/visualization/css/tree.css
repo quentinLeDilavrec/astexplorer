@@ -1,4 +1,5 @@
 .tree-visualization {
+  font-size: 10px;
   display: flex;
   flex-direction: column;
 }
@@ -25,6 +26,7 @@
   cursor: default;
   box-sizing: border-box;
   font-family: monospace;
+  /* line-height: .15em; */
   -webkit-touch-callout: none;
   user-select: none;
   overflow-y: auto;
@@ -34,4 +36,8 @@
 .tree-visualization .value-body {
   min-width: 300px;
   width: fit-content;
+}
+
+.tree-visualization li.entry {
+  padding: 1px;
 }

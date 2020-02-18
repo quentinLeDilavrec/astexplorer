@@ -41,7 +41,8 @@ export default store => next => action => {
         const cond = newDiffer !== getParser(store.getState()) ||
           newParserSettings !== getParserSettings(store.getState()) ||
           newCode !== getCode(store.getState())
-        if (false) { // TODO modify it
+        if (false && cond) { // TODO modify it
+
           return;
         }
         // Temporary adapter for parsers that haven't been migrated yet.

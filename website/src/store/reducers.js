@@ -59,7 +59,7 @@ export function persist(state) {
     workbench: {
       ...pick(state.workbench, 'parser', 'code', 'keyMap'),
       transform: pick(state.workbench.transform, 'code', 'transformer'),
-      diff: pick(state.workbench.diff, 'code', 'differ'),
+      diff: pick(state.workbench.diff, 'code', 'differ') || "persist",
     },
   };
 }
@@ -81,7 +81,8 @@ export function revive(state = initialState) {
       },
       diff: {
         ...state.workbench.diff,
-        initialCode: state.workbench.diff.code,
+        initialCode: state.workbench.code,
+        code: (state.workbench.diff && state.workbench.diff.code) || state.workbench.code,
       },
     },
   };
@@ -227,9 +228,9 @@ function workbench(state = initialState.workbench, action, fullState) {
           newState2.diff = {
             ...state.diff,
             differ: action.differ.id,
-            code: snippetHasDifferentDiff ?
+            code: (snippetHasDifferentDiff ?
               (state.diff.code === undefined ? newState2.code : state.diff.code) :
-              (action.differ.defaultDiff === undefined ? newState2.code : action.differ.defaultDiff),
+              (action.differ.defaultDiff === undefined ? newState2.code : action.differ.defaultDiff)) || "select differ",
             initialCode: snippetHasDifferentDiff ?
               fullState.activeRevision.getDiffCode() :
               action.differ.defaultDiff,
@@ -249,10 +250,10 @@ function workbench(state = initialState.workbench, action, fullState) {
     case actions.SET_OLD:
       return {
         ...state,
-        code: action.code,
+        code: action.code || state.code,
         diff: {
           ...state.diff,
-          code: action.oldcode,
+          code: action.oldcode || state.diff.code,
         },
       };
     case actions.SET_SNIPPET:
@@ -278,7 +279,7 @@ function workbench(state = initialState.workbench, action, fullState) {
           diff: {
             ...state.diff,
             differ: differID,
-            code: revision.getDiffCode(),
+            code: revision.getDiffCode() || state.diff.code || state.code,
             initialCode: revision.getDiffCode(),
           },
         };
@@ -309,7 +310,7 @@ function workbench(state = initialState.workbench, action, fullState) {
           const differ = getDifferByID(state.diff.differ);
           newState.diff = {
             ...state.diff,
-            code: differ.defaultTransform,
+            code: differ.defaultTransform || "default",
             initialCode: differ.defaultTransform,
           };
         }

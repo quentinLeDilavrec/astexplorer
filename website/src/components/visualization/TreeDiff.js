@@ -50,7 +50,7 @@ function makeCheckbox(name, settings, updateSettings) {
   );
 }
 
-export default function Tree({parseResult, position}) {
+export default function TreeDiff({parseResult, position}) {
   const [settings, updateSettings] = useReducer(reducer, null, initSettings);
   const treeAdapter = useMemo(
     () => treeAdapterFromParseResult(parseResult, settings),
@@ -62,6 +62,7 @@ export default function Tree({parseResult, position}) {
   useLayoutEffect(() => {
     focusNodes('focus', rootElement);
   });
+  treeAdapter.coucou="aaa";
 
   return (
     <div className="tree-visualization container">
@@ -89,7 +90,7 @@ export default function Tree({parseResult, position}) {
             treeAdapter={treeAdapter}
             autofocus={settings.autofocus}
             position={position}
-            diff={false}
+            diff={true}
           />
         </SelectedNodeProvider>
       </ul>
@@ -97,7 +98,7 @@ export default function Tree({parseResult, position}) {
   );
 }
 
-Tree.propTypes = {
+TreeDiff.propTypes = {
   parseResult: PropTypes.object,
   position: PropTypes.number,
 };

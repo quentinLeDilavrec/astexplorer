@@ -4,7 +4,7 @@ import defaultParserInterface from '../utils/defaultParserInterface';
 const ID = 'spoon';
 const VERSION = '0.0.0';
 const HOMEPAGE = 'https://github.com/SpoonLabs/spoon';
-const PARSER_SERVICE_URL = 'http://localhost:8087/spoon';
+const PARSER_SERVICE_URL = 'http://131.254.17.96:8087/spoon';
 
 export default {
   ...defaultParserInterface,
@@ -13,21 +13,27 @@ export default {
   displayName: ID,
   version: VERSION,
   homepage: HOMEPAGE,
-  locationProps: new Set(['loc']),
+  locationProps: new Set(['loc', 'start', 'end']),
 
   loadParser(callback) {
     const url = PARSER_SERVICE_URL;
     callback(function spoonParsingHandler(code) {
-      const Http = new XMLHttpRequest();
-      Http.open("GET", url+'?code='+btoa(code));
-      Http.send();
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", url);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:8087');
+      xhr.setRequestHeader('Access-Control-Allow-Credentials', 'true');
+      xhr.setRequestHeader('Content-Type', 'text/plain');
 
       return new Promise(
         (resolve) => {
-          Http.onloadend = (e) => {
-            console.log(JSON.parse(Http.response));
-            resolve(JSON.parse(Http.response));
+          xhr.onload = (e) => {
+            if (xhr.response) {
+              resolve(JSON.parse(xhr.response));
+            }
           }
+          xhr.send(btoa(code));
         });
     });
   },
@@ -36,12 +42,9 @@ export default {
     return await spoon(code);
   },
 
-  nodeToRange({ loc }) {
-    if (loc) {
-      return [
-        loc.start.offset,
-        loc.end.offset,
-      ];
+  nodeToRange(node) {
+    if (typeof node.start === 'number') {
+      return [node.start, node.end + 1];
     }
   },
 }

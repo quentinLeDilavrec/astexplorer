@@ -68,7 +68,7 @@ export default class DiffEditor extends React.Component {
           oldvalue: nextProps.oldvalue,
         },
         () => {
-          // this.codeMirror.editor().setValue(nextProps.value); // TODO usefull?
+          // this.codeMirror.edit.setValue(nextProps.value); // TODO usefull?
 
         },
       );
@@ -94,7 +94,7 @@ export default class DiffEditor extends React.Component {
   }
 
   getOldValue() {
-    return this.codeMirror && this.codeMirror.editor().state.diffViews[0].orig.getValue();
+    return this.codeMirror && this.codeMirror.edit.state.diffViews[0].orig.getValue();
   }
 
   _getErrorLine(error) {
@@ -114,7 +114,7 @@ export default class DiffEditor extends React.Component {
       if (error) {
         let lineNumber = this._getErrorLine(error);
         if (lineNumber) {
-          this.codeMirror.editor().addLineClass(lineNumber - 1, 'text', 'errorMarker');
+          this.codeMirror.edit.addLineClass(lineNumber - 1, 'text', 'errorMarker');
         }
       }
     }
@@ -141,7 +141,8 @@ export default class DiffEditor extends React.Component {
         // orig: '0.0.0',
         highlightDifferences: true,
         // connect: "align",
-        collapseIdentical: false
+        collapseIdentical: false,
+        allowEditingOriginals: true,
       },
     );
 
@@ -162,18 +163,28 @@ export default class DiffEditor extends React.Component {
 
     this._bindCMHandler('changes', () => {
       clearTimeout(this._updateTimer);
-      this._updateTimer = setTimeout(this._onContentChange.bind(this), 200);
-    });
+      this._updateTimer = setTimeout(this._onContentChangeRight.bind(this), 200);
+    }, "right");
+    this._bindCMHandler('changes', () => {
+      clearTimeout(this._updateTimer);
+      this._updateTimer = setTimeout(this._onContentChangeLeft.bind(this), 200);
+    }, "left");
     this._bindCMHandler('cursorActivity', () => {
       clearTimeout(this._updateTimer);
-      this._updateTimer = setTimeout(this._onActivity.bind(this, true), 100);
-    });
+      this._updateTimer = setTimeout(this._onActivityRight.bind(this, true), 100);
+    }, "right");
+    this._bindCMHandler('cursorActivity', () => {
+      clearTimeout(this._updateTimer);
+      this._updateTimer = setTimeout(this._onActivityLeft.bind(this, true), 100);
+    }, "left");
 
     this._subscriptions.push(
       PubSub.subscribe('PANEL_RESIZE', () => {
         if (this.codeMirror) {
           console.log(7, this)
-          this.codeMirror.editor().refresh();
+          this.codeMirror.edit.refresh();
+          this.codeMirror.edit.state.diffViews[0].orig.refresh();
+
           // this.codeMirror.left.forceUpdate()(this.state.mode)
           // this.codeMirror.right.forceUpdate()(this.state.mode)
         }
@@ -184,26 +195,41 @@ export default class DiffEditor extends React.Component {
       this._markerRange = null;
       this._mark = null;
       this._subscriptions.push(
-        PubSub.subscribe('HIGHLIGHT', (_, { range }) => {
+        PubSub.subscribe('HIGHLIGHT', (_, { node, range }) => {
           if (!range) {
             return;
           }
-          let doc = this.codeMirror.getDoc();
+          console.log(1243, this.codeMirror, this.codeMirror.edit.state.diffViews[0].orig)
+          let docRight = this.codeMirror.edit.getDoc();
+          let docLeft = this.codeMirror.edit.state.diffViews[0].orig.getDoc();
           this._markerRange = range;
           // We only want one mark at a time.
           if (this._mark) {
             this._mark.clear();
           }
-          let [start, end] = range.map(index => this._posFromIndex(doc, index));
-          if (!start || !end) {
+          if (this._mark_orig) {
+            this._mark_orig.clear();
+          }
+          let [startRight, endRight] = range.map(index => this._posFromIndex(docRight, index));
+          let [startLeft, endLeft] = range.map(index => this._posFromIndex(docLeft, index));
+          if (!startRight || !endRight) {
             this._markerRange = this._mark = null;
             return;
           }
-          this._mark = this.codeMirror.markText(
-            start,
-            end,
-            { className: 'marked' },
-          );
+          if (node.side === "right") {
+            this._mark = this.codeMirror.edit.markText(
+              startRight,
+              endRight,
+              { className: 'marked' },
+            );
+          }
+          if (node.side === "left") {
+            this._mark_orig = this.codeMirror.edit.state.diffViews[0].orig.markText(
+              startLeft,
+              endLeft,
+              { className: 'marked' },
+            );
+          }
         }),
 
         PubSub.subscribe('CLEAR_HIGHLIGHT', (_, { range } = {}) => {
@@ -216,6 +242,10 @@ export default class DiffEditor extends React.Component {
             if (this._mark) {
               this._mark.clear();
               this._mark = null;
+            }
+            if (this._mark_orig) {
+              this._mark_orig.clear();
+              this._mark_orig = null;
             }
           }
         }),
@@ -237,42 +267,79 @@ export default class DiffEditor extends React.Component {
     this.codeMirror = null;
   }
 
-  _bindCMHandler(event, handler) {
-    this._CMHandlers.push(event, handler);
-    this.codeMirror.edit.on(event, handler);
+  _bindCMHandler(event, handler, side) {
+    this._CMHandlers.push([event, handler, side ? side : ""]);
+    if (side === "right") {
+      this.codeMirror.edit.on(event, handler);
+    } else if (side === "left") {
+      this.codeMirror.edit.state.diffViews[0].orig.on(event, handler);
+    } else {
+      this.codeMirror.edit.on(event, handler);
+      this.codeMirror.edit.state.diffViews[0].orig.on(event, handler);
+    }
   }
 
   _unbindHandlers() {
     const cmHandlers = this._CMHandlers;
-    for (let i = 0; i < cmHandlers.length; i += 2) {
-      this.codeMirror.editor().off(cmHandlers[i], cmHandlers[i + 1]);
+    for (let i = 0; i < cmHandlers.length; i += 1) {
+      if (cmHandlers[i][2] === "right") {
+        this.codeMirror.edit.off(cmHandlers[i][0], cmHandlers[i][1]);
+      } else if (cmHandlers[i][2] === "left") {
+        this.codeMirror.edit.state.diffViews[0].orig.off(cmHandlers[i][0], cmHandlers[i][1]);
+      } else {
+        this.codeMirror.edit.off(cmHandlers[i][0], cmHandlers[i][1]);
+        this.codeMirror.edit.state.diffViews[0].orig.off(cmHandlers[i][0], cmHandlers[i][1]);
+      }
     }
     this._subscriptions.forEach(PubSub.unsubscribe);
   }
 
-  _onContentChange() {
-    const doc = this.codeMirror.editor().getDoc();
-    // console.log(7534,this.codeMirror.editor().state.diffViews[0].orig)
+  _onContentChangeRight() {
+    const docRight = this.codeMirror.edit.getDoc();
     const args = {
-      value: doc.getValue(),
-      oldvalue: this.codeMirror.editor().state.diffViews[0].orig.getValue(),
-      cursor: doc.indexFromPos(doc.getCursor()),
+      value: docRight.getValue(),
+      cursor: docRight.indexFromPos(docRight.getCursor()),
+      side: "right",
     };
-    console.log(37,args)
-    // this.codeMirror.editor().state.diffViews[0].orig.setValue('fwefw\nwefew')
     this.setState(
       {
         value: args.value,
-        oldvalue: args.oldvalue,
       },
       () => {
-        this.props.onContentChange(args)},
+        this.props.onContentChange(args)
+      },
     );
   }
 
-  _onActivity() {
+  _onContentChangeLeft() {
+    const docLeft = this.codeMirror.edit.state.diffViews[0].orig.getDoc();
+    const args = {
+      oldvalue: docLeft.getValue(),
+      cursor: docLeft.indexFromPos(docLeft.getCursor()),
+      side: "right",
+    };
+    this.setState(
+      {
+        oldvalue: args.oldvalue,
+      },
+      () => {
+        this.props.onContentChange(args)
+      },
+    );
+  }
+
+  _onActivityRight() {
     this.props.onActivity(
-      this.codeMirror.editor().getDoc().indexFromPos(this.codeMirror.editor().getCursor()),
+      this.codeMirror.edit
+        .getDoc().indexFromPos(this.codeMirror.edit.getCursor()),
+      "right",
+    );
+  }
+  _onActivityLeft() {
+    this.props.onActivity(
+      this.codeMirror.edit.state.diffViews[0].orig
+        .getDoc().indexFromPos(this.codeMirror.edit.getCursor()),
+      "left",
     );
   }
 
@@ -304,7 +371,7 @@ DiffEditor.defaultProps = {
   readOnly: false,
   mode: 'javascript',
   keyMap: 'default',
-  onContentChange: (x) => {},
+  onContentChange: (x) => { },
   onActivity: () => { },
 };
 
@@ -321,7 +388,7 @@ DiffEditor.defaultProps = {
 //   orig2 = value.replace(/\u003cscript/g, "\u003cscript type=text/javascript ")
 //     .replace("white", "purple;\n      font: comic sans;\n      text-decoration: underline;\n      height: 15em");
 //   initUI();
-//   let d = document.createElement("div"); d.style.cssText = "width: 50px; margin: 7px; height: 14px"; dv.editor().addLineWidget(57, d)
+//   let d = document.createElement("div"); d.style.cssText = "width: 50px; margin: 7px; height: 14px"; dv.edit.addLineWidget(57, d)
 // };
 
 // function mergeViewHeight(mergeView) {
@@ -330,7 +397,7 @@ DiffEditor.defaultProps = {
 //     return editor.getScrollInfo().height;
 //   }
 //   return Math.max(editorHeight(mergeView.leftOriginal()),
-//                   editorHeight(mergeView.editor()),
+//                   editorHeight(mergeView.edit),
 //                   editorHeight(mergeView.rightOriginal()));
 // }
 
@@ -339,7 +406,7 @@ DiffEditor.defaultProps = {
 //   for(;;) {
 //     if (mergeView.leftOriginal())
 //       mergeView.leftOriginal().setSize(null, height);
-//     mergeView.editor().setSize(null, height);
+//     mergeView.edit.setSize(null, height);
 //     if (mergeView.rightOriginal())
 //       mergeView.rightOriginal().setSize(null, height);
 
