@@ -115,7 +115,7 @@ export function selectDiffer(differ) {
   return {type: SELECT_DIFFER, differ};
 }
 
-export function hideOld() {
+export function hideDiff() {
   return {type: HIDE_OLD};
 }
 

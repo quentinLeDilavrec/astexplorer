@@ -1,7 +1,7 @@
-import {connect} from 'react-redux';
-import {setOldState, setCursor} from '../store/actions';
+import { connect } from 'react-redux';
+import { setOldState, setCursor } from '../store/actions';
 import DiffEditor from '../components/DiffEditor';
-import {getDiffCode, getParser, getParseResult, getKeyMap, getCode} from '../store/selectors';
+import { getDiffCode, getParser, getParseResult, getKeyMap, getCode } from '../store/selectors';
 
 function mapStateToProps(state) {
   return {
@@ -15,9 +15,9 @@ function mapStateToProps(state) {
 
 function mapDispatchToProps(dispatch) {
   return {
-    onContentChange: ({value, oldvalue, cursor, side}) => {
-      console.log('oncontentchange', {value, oldvalue, cursor}) 
-      const o = {cursor, side};
+    onContentChange: ({ value, oldvalue, cursor, side }) => {
+      console.log('oncontentchange', { aa: (value === oldvalue), cursor })
+      const o = { cursor, side };
       oldvalue && (o.oldcode = oldvalue);
       value && (o.code = value);
       dispatch(setOldState(o));

@@ -3,7 +3,7 @@ import defaultParserInterface from '../../../utils/defaultParserInterface';
 const ID = 'gumtree';
 const VERSION = '0.0.0';
 const HOMEPAGE = 'https://github.com/SpoonLabs/gumtree';
-const PARSER_SERVICE_URL = 'http://131.254.17.96:8087/gumtree';
+const PARSER_SERVICE_URL = 'http://131.254.17.96:8095/diff/gumtree';
 
 export default {
   ...defaultParserInterface,
@@ -12,7 +12,7 @@ export default {
   version: VERSION,
   homepage: HOMEPAGE,
   locationProps: new Set(['loc', 'start', 'end', 'side']),
-  typeProps: new Set(['type', "node type"]),
+  typeProps: new Set(['type'/*, "node type"*/]),
   // _ignoredProperties: new Set(['_side']),
 
   // opensByDefault(_node, _key) {
@@ -33,49 +33,60 @@ export default {
     function addSide(op) {
       if (typeof op.from === "object") {
         op.from.side = 'left';
-        apply2AST('left')(op.from.valueAST);
+        op.from.valueAST && apply2AST('left')(op.from.valueAST);
       }
       if (typeof op.to === "object") {
         op.to.side = "right";
-        apply2AST('right')(op.to.valueAST);
+        op.to.valueAST && apply2AST('right')(op.to.valueAST);
       }
       if (typeof op.into === "object") {
         op.into.side = "right";
-        apply2AST('right')(op.into.valueAST);
+        op.into.valueAST && apply2AST('right')(op.into.valueAST);
       }
       if (typeof op.at === "object") {
-        if (op.class === "Delete") {
+        if (op.type === "Delete") {
           op.at.side = "left";
-          apply2AST('left')(op.at.valueAST);
-        } else if (op.class === "Insert") {
+          op.at.valueAST && apply2AST('left')(op.at.valueAST);
+        } else if (op.type === "Insert") {
           op.at.side = "right";
-          apply2AST('right')(op.at.valueAST);
+          op.at.valueAST && apply2AST('right')(op.at.valueAST);
         }
       }
     }
 
     const url = PARSER_SERVICE_URL;
-    callback(function gumtreeDiffHandler(old, neww) {
+    callback(function gumtreeDiffHandler(before, after) {
       const xhr = new XMLHttpRequest();
       xhr.open("PUT", url);// + '?old=' + btoa(old) + '&new=' + btoa(neww));
       xhr.withCredentials = true;
       // res.header("Content-Type", "application/json");
       xhr.setRequestHeader('Access-Control-Allow-Origin', 'http://131.254.17.96:8087');
       xhr.setRequestHeader('Access-Control-Allow-Credentials', 'true');
-      xhr.setRequestHeader('Content-Type', 'text/plain');
+      // xhr.setRequestHeader('Content-Type', 'text/plain');
+      // xhr.setRequestHeader('Content-Type', "application/json; charset=utf-8");
+      xhr.setRequestHeader('Content-Type', "application/json");
       return new Promise(
         (resolve, reject) => {
           xhr.onload = (e) => {
+            if (xhr.response === "<html><body><h2>404 Not found</h2></body></html>") {
+              console.error(xhr.response)
+              // reject(r)
+              return
+            }
             const r = JSON.parse(xhr.response)
-            if (r.error === "java.lang.NullPointerException") {
+            if (r.error) {
               reject(r)
             } else {
-              const o = r.actions;
+              const o0 = r.diff;
+              window.reloadGraph(r.impact || {perRoot:[],roots:[],tests:[]});
+              const o = o0.actions;
               o.map(addSide)
               resolve(o);
             }
           }
-          xhr.send(btoa(old) + '\n' + btoa(neww));
+          // xhr.send(btoa(before) + '\n' + btoa(after));
+          // xhr.send(JSON.stringify({before:btoa(before), after:btoa(after)}));
+          xhr.send(JSON.stringify(window.currentTarget));
         });
     });
   },

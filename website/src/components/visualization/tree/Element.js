@@ -3,13 +3,13 @@ import CompactObjectView from './CompactObjectView';
 import PropTypes from 'prop-types';
 import PubSub from 'pubsub-js';
 import React from 'react';
-import {useSelectedNode} from '../SelectedNodeContext.js';
+import { useSelectedNode } from '../SelectedNodeContext.js';
 import focusNodes from '../focusNodes.js'
 
 import cx from 'classnames';
 import stringify from '../../../utils/stringify';
 
-const {useState, useRef, useMemo, useCallback, useEffect} = React;
+const { useState, useRef, useMemo, useCallback, useEffect } = React;
 
 function usePrevious(value, initialValue) {
   const ref = useRef(initialValue);
@@ -94,7 +94,7 @@ function useOpenState(openFromParent, isInRange) {
   const previousComputedOpenState = useRef(OPEN_STATES.DEFAULT);
   let computedOpenState = previousComputedOpenState.current;
 
-  if(ownOpenState !== previousOwnOpenState) {
+  if (ownOpenState !== previousOwnOpenState) {
     computedOpenState = ownOpenState;
   } else if (wasInRange !== isInRange) {
     computedOpenState = transition(
@@ -115,7 +115,7 @@ function useOpenState(openFromParent, isInRange) {
     previousComputedOpenState.current = computedOpenState;
   });
 
-  return [ computedOpenState, setOwnOpenState ];
+  return [computedOpenState, setOwnOpenState];
 }
 
 const Element = React.memo(function Element({
@@ -131,6 +131,7 @@ const Element = React.memo(function Element({
   selected,
   onClick,
   position,
+  diff,
 }) {
   const opensByDefault = useMemo(
     () => treeAdapter.opensByDefault(value, name),
@@ -167,15 +168,28 @@ const Element = React.memo(function Element({
 
   // enable highlight on hover if node has a range
   if (range && level !== 0) {
-    onMouseOver = event => {
-      event.stopPropagation();
-      PubSub.publish('HIGHLIGHT', {node: value, range});
-    };
+    if (diff) {
+      debugger
+      onMouseOver = event => {
+        event.stopPropagation();
+        PubSub.publish('HIGHLIGHT_DIFF', { node: value, range });
+      };
 
-    onMouseLeave = event => {
-      event.stopPropagation();
-      PubSub.publish('CLEAR_HIGHLIGHT', {node: value, range});
-    };
+      onMouseLeave = event => {
+        event.stopPropagation();
+        PubSub.publish('CLEAR_HIGHLIGHT_DIFF', { node: value, range });
+      };
+    } else {
+      onMouseOver = event => {
+        event.stopPropagation();
+        PubSub.publish('HIGHLIGHT', { node: value, range });
+      };
+
+      onMouseLeave = event => {
+        event.stopPropagation();
+        PubSub.publish('CLEAR_HIGHLIGHT', { node: value, range });
+      };
+    }
   }
 
   const clickHandler = useCallback(
@@ -232,7 +246,7 @@ const Element = React.memo(function Element({
           <span className="tokenName nc" onClick={onToggleClick}>
             {nodeName}{' '}
             {selected ?
-              <span className="ge" style={{fontSize: '0.8em'}}>
+              <span className="ge" style={{ fontSize: '0.8em' }}>
                 {' = $node'}
               </span> :
               null
@@ -247,8 +261,8 @@ const Element = React.memo(function Element({
         suffix = ']';
         const node = value;
         let elements = Array.from(treeAdapter.walkNode(value))
-          .filter(({key}) => key !== 'length')
-          .map(({key, value, computed}) => renderChild(
+          .filter(({ key }) => key !== 'length')
+          .map(({ key, value, computed }) => renderChild(
             key,
             value,
             node,
@@ -273,7 +287,7 @@ const Element = React.memo(function Element({
         suffix = '}';
         const node = value;
         let elements = Array.from(treeAdapter.walkNode(value))
-          .map(({key, value, computed}) => renderChild(
+          .map(({ key, value, computed }) => renderChild(
             key,
             value,
             node,
@@ -283,7 +297,7 @@ const Element = React.memo(function Element({
         content = <ul className="value-body">{elements}</ul>;
         showToggler = elements.length > 0;
       } else {
-        let keys = Array.from(treeAdapter.walkNode(value), ({key}) => key);
+        let keys = Array.from(treeAdapter.walkNode(value), ({ key }) => key);
         valueOutput =
           <span>
             {valueOutput}
@@ -319,21 +333,21 @@ const Element = React.memo(function Element({
     </li>
   );
 },
-(prevProps, nextProps) => {
-  return prevProps.name === nextProps.name &&
-    prevProps.value === nextProps.value &&
-    prevProps.computed === nextProps.computed &&
-    prevProps.open === nextProps.open &&
-    prevProps.level === nextProps.level &&
-    prevProps.treeAdapter === nextProps.treeAdapter &&
-    prevProps.autofocus === nextProps.autofocus &&
-    prevProps.selected === nextProps.selected &&
-    prevProps.onClick === nextProps.onClick &&
-    prevProps.isInRange === nextProps.isInRange &&
-    prevProps.hasChildrenInRange === nextProps.hasChildrenInRange &&
-    //
-    ((nextProps.isInRange || nextProps.hashChildrenInRange) && prevProps.position === nextProps.position);
-});
+  (prevProps, nextProps) => {
+    return prevProps.name === nextProps.name &&
+      prevProps.value === nextProps.value &&
+      prevProps.computed === nextProps.computed &&
+      prevProps.open === nextProps.open &&
+      prevProps.level === nextProps.level &&
+      prevProps.treeAdapter === nextProps.treeAdapter &&
+      prevProps.autofocus === nextProps.autofocus &&
+      prevProps.selected === nextProps.selected &&
+      prevProps.onClick === nextProps.onClick &&
+      prevProps.isInRange === nextProps.isInRange &&
+      prevProps.hasChildrenInRange === nextProps.hasChildrenInRange &&
+      //
+      ((nextProps.isInRange || nextProps.hashChildrenInRange) && prevProps.position === nextProps.position);
+  });
 
 Element.propTypes = {
   name: PropTypes.string,
@@ -347,6 +361,7 @@ Element.propTypes = {
     PropTypes.object,
     PropTypes.array,
   ]),
+  diff: PropTypes.bool,
 };
 
 const NOT_COMPUTED = {};
@@ -354,7 +369,7 @@ const NOT_COMPUTED = {};
 const FunctionElement = React.memo(function FunctionElement(props) {
   const [computedValue, setComputedValue] = useState(NOT_COMPUTED);
   const [error, setError] = useState(null);
-  const {name, value, parent, computed, treeAdapter} = props;
+  const { name, value, parent, computed, treeAdapter } = props;
 
   if (computedValue !== NOT_COMPUTED) {
     if (treeAdapter.isArray(computedValue) || treeAdapter.isObject(computedValue)) {
@@ -387,7 +402,7 @@ const FunctionElement = React.memo(function FunctionElement(props) {
               const computedValue = value.call(parent);
               console.log(computedValue); // eslint-disable-line no-console
               setComputedValue(computedValue);
-            } catch(err) {
+            } catch (err) {
               console.error(`Unable to run "${name}": `, err.message); // eslint-disable-line no-console
               setError(err);
             }
@@ -395,7 +410,7 @@ const FunctionElement = React.memo(function FunctionElement(props) {
           (...)
         </span>
       </span>
-      {error  ?
+      {error ?
         <span>
           {' '}
           <i
@@ -432,11 +447,11 @@ PrimitiveElement.propTypes = {
   computed: PropTypes.bool,
 };
 
-const PropertyName = React.memo(function PropertyName({name, computed, onClick}) {
+const PropertyName = React.memo(function PropertyName({ name, computed, onClick }) {
   return (
     <span className="key">
       <span className="name nb" onClick={onClick}>
-        {computed ? <span title="computed">*{name}</span> : name }
+        {computed ? <span title="computed">*{name}</span> : name}
       </span>
       <span className="p">:&nbsp;</span>
     </span>

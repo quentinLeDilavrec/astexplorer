@@ -57,7 +57,6 @@ export default class SplitPane extends React.Component {
     let styleA;
     let styleB;
     let dividerStyle;
-
     if (!Array.isArray(children) || children.filter(x => x).length !== 2) {
       return (
         <div className={this.props.className}>

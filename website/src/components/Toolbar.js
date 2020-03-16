@@ -33,7 +33,7 @@ export default function Toolbar(props) {
     transformerInfo = <div>Transformer: {transformerInfo}</div>;
   }
 
-  if (showDiffer) {
+  if (showDiffer && differ) {
     differInfo = differ.displayName;
     if (differ.version) {
       differInfo += '-' + differ.version;
@@ -79,6 +79,7 @@ Toolbar.propTypes = {
   onParserSettingsButtonClick: PropTypes.func,
   onShareButtonClick: PropTypes.func,
   onTransformChange: PropTypes.func,
+  onDiffChange: PropTypes.func,
   onKeyMapChange: PropTypes.func,
   parser: PropTypes.object,
   transformer: PropTypes.object,

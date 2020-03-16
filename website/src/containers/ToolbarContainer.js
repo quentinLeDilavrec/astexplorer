@@ -7,7 +7,7 @@ import {
   selectTransformer,
   hideTransformer,
   selectDiffer,
-  hideOld,
+  hideDiff,
   setParser,
   reset,
   setKeyMap,
@@ -60,11 +60,11 @@ function mapDispatchToProps(dispatch) {
         logEvent('tool', 'select', transformer.id);
       }
     },
-    onOldChange: old => {
+    onDiffChange: diff => {
       // debugger
-      dispatch(old ? selectDiffer(old) : hideOld());
-      if (old) {
-        logEvent('tool', 'select', old.id);
+      dispatch(diff ? selectDiffer(diff) : hideDiff());
+      if (diff) {
+        logEvent('tool', 'select', diff.id);
       }
     },
     onKeyMapChange: keyMap => {

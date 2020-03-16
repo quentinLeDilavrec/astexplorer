@@ -17,12 +17,12 @@ export default class EvolveButton extends React.Component {
     } else {
       differID = target.value;
     }
-    this.props.onOldChange(getDifferByID(differID));
+    this.props.onDiffChange(getDifferByID(differID));
   }
 
   _onToggle() {
     if (this.props.differ) {
-      this.props.onOldChange(null);
+      this.props.onDiffChange(null);
     }
   }
 

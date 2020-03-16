@@ -4,7 +4,8 @@ import defaultParserInterface from '../utils/defaultParserInterface';
 const ID = 'spoon';
 const VERSION = '0.0.0';
 const HOMEPAGE = 'https://github.com/SpoonLabs/spoon';
-const PARSER_SERVICE_URL = 'http://131.254.17.96:8087/spoon';
+// const PARSER_SERVICE_URL = 'http://131.254.17.96:8087/spoon';
+const PARSER_SERVICE_URL = 'http://131.254.17.96:8095/ast/spoon';
 
 export default {
   ...defaultParserInterface,
@@ -27,8 +28,13 @@ export default {
       xhr.setRequestHeader('Content-Type', 'text/plain');
 
       return new Promise(
-        (resolve) => {
+        (resolve,reject) => {
           xhr.onload = (e) => {
+            if(xhr.responseText==="<html><body><h2>404 Not found</h2></body></html>"){
+              // reject(xhr.response)
+              console.error(xhr.response)
+              return
+            }
             if (xhr.response) {
               resolve(JSON.parse(xhr.response));
             }

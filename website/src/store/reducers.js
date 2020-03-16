@@ -204,7 +204,6 @@ function workbench(state = initialState.workbench, action, fullState) {
       }
     case actions.SELECT_DIFFER:
       {
-        // debugger
         // const differentParser =
         // action.differ.defaultParserID !== state.parser;
         const differentDiffer =
@@ -221,6 +220,7 @@ function workbench(state = initialState.workbench, action, fullState) {
         //   newState.parserSettings =
         //     fullState.parserSettings[action.differ.defaultParserID] || null;
         // }
+        // newState2.code = fullState.workbench.diff.code;
         if (differentDiffer) {
           const snippetHasDifferentDiff = fullState.activeRevision &&
             fullState.activeRevision.getDifferID() === action.differ.id;
@@ -228,9 +228,10 @@ function workbench(state = initialState.workbench, action, fullState) {
           newState2.diff = {
             ...state.diff,
             differ: action.differ.id,
-            code: (snippetHasDifferentDiff ?
-              (state.diff.code === undefined ? newState2.code : state.diff.code) :
-              (action.differ.defaultDiff === undefined ? newState2.code : action.differ.defaultDiff)) || "select differ",
+            code: fullState.workbench.diff.code,
+            // (snippetHasDifferentDiff ?
+            //   (state.diff.code === undefined ? newState2.code : state.diff.code) :
+            //   (action.differ.defaultDiff === undefined ? newState2.code : action.differ.defaultDiff)) || "select differ",
             initialCode: snippetHasDifferentDiff ?
               fullState.activeRevision.getDiffCode() :
               action.differ.defaultDiff,

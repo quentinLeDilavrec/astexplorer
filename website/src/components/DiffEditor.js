@@ -59,30 +59,30 @@ export default class DiffEditor extends React.Component {
     };
   }
 
-  UNSAFE_componentWillReceiveProps(nextProps) {
-    if (nextProps.value !== this.state.value ||
-      nextProps.oldvalue !== this.state.oldvalue) {
-      this.setState(
-        {
-          value: nextProps.value,
-          oldvalue: nextProps.oldvalue,
-        },
-        () => {
-          // this.codeMirror.edit.setValue(nextProps.value); // TODO usefull?
+  // UNSAFE_componentWillReceiveProps(nextProps) {
+  //   if (nextProps.value !== this.state.value ||
+  //     nextProps.oldvalue !== this.state.oldvalue) {
+  //     this.setState(
+  //       {
+  //         value: nextProps.value,
+  //         oldvalue: nextProps.oldvalue,
+  //       },
+  //       () => {
+  //         // this.codeMirror.edit.setValue(nextProps.value); // TODO usefull?
 
-        },
-      );
-    }
-    if (nextProps.mode !== this.props.mode) {
-      this.codeMirror.setOption('mode', nextProps.mode);
-    }
+  //       },
+  //     );
+  //   }
+  //   if (nextProps.mode !== this.props.mode) {
+  //     this.codeMirror.setOption('mode', nextProps.mode);
+  //   }
 
-    if (nextProps.keyMap !== this.props.keyMap) {
-      this.codeMirror.setOption('keyMap', nextProps.keyMap);
-    }
+  //   if (nextProps.keyMap !== this.props.keyMap) {
+  //     this.codeMirror.setOption('keyMap', nextProps.keyMap);
+  //   }
 
-    this._setError(nextProps.error);
-  }
+  //   this._setError(nextProps.error);
+  // }
 
 
   shouldComponentUpdate() {
@@ -90,11 +90,22 @@ export default class DiffEditor extends React.Component {
   }
 
   getValue() {
-    return this.codeMirror && this.codeMirror.getValue();
+    return this.codeMirror && (this.state.value = this.codeMirror.getValue());
   }
 
   getOldValue() {
-    return this.codeMirror && this.codeMirror.edit.state.diffViews[0].orig.getValue();
+    return this.codeMirror && (this.state.oldvalue = this.codeMirror.edit.state.diffViews[0].orig.getValue());
+  }
+
+  setMirrorsValue({ before, after }) {
+    return {
+      before: this.codeMirror && (this.state.value = after)
+        && this.codeMirror.editor()
+        && this.codeMirror.editor().swapDoc(after),
+      after: this.codeMirror && (this.state.oldvalue = before)
+        && this.codeMirror.leftOriginal()
+        && this.codeMirror.leftOriginal().swapDoc(before)
+    }
   }
 
   _getErrorLine(error) {

@@ -1,10 +1,9 @@
 // import pkg from 'json-to-ast/package.json';
 import defaultParserInterface from '../../../utils/defaultParserInterface';
-
-const ID = 'other';
+const ID = 'RefDiff';
 const VERSION = '0.0.0';
-const HOMEPAGE = 'https://github.com/SpoonLabs/gumtree';
-const PARSER_SERVICE_URL = 'http://131.254.17.96:8087/gumtree';
+const HOMEPAGE = 'https://github.com/aserg-ufmg/RefDiff';
+const PARSER_SERVICE_URL = 'http://131.254.17.96:8089/RefDiff';
 
 export default {
   ...defaultParserInterface,
@@ -14,10 +13,10 @@ export default {
   homepage: HOMEPAGE,
   locationProps: new Set(['loc', 'start', 'end', 'side']),
   typeProps: new Set(['type', "node type"]),
-  // _ignoredProperties: new Set(['loc', 'side']),
+  // _ignoredProperties: new Set(['_side']),
 
   // opensByDefault(_node, _key) {
-  //   return _key === "actions";
+  //   return _key==="actions";
   // },
 
   loadDiffer(callback) {
@@ -34,30 +33,31 @@ export default {
     function addSide(op) {
       if (typeof op.from === "object") {
         op.from.side = 'left';
-        apply2AST('left')(op.from.valueAST);
+        op.from.valueAST && apply2AST('left')(op.from.valueAST);
       }
       if (typeof op.to === "object") {
         op.to.side = "right";
-        apply2AST('right')(op.to.valueAST);
+        op.to.valueAST && apply2AST('right')(op.to.valueAST);
       }
       if (typeof op.into === "object") {
         op.into.side = "right";
-        apply2AST('right')(op.into.valueAST);
+        op.into.valueAST && apply2AST('right')(op.into.valueAST);
       }
       if (typeof op.at === "object") {
-        if (op.class === "Delete") {
+        if (op.type === "Delete") {
           op.at.side = "left";
-          apply2AST('left')(op.at.valueAST);
-        } else if (op.class === "Insert") {
+          op.at.valueAST && apply2AST('left')(op.at.valueAST);
+        } else if (op.type === "Insert") {
           op.at.side = "right";
-          apply2AST('right')(op.at.valueAST);
+          op.at.valueAST && apply2AST('right')(op.at.valueAST);
         }
       }
     }
+
     const url = PARSER_SERVICE_URL;
     callback(function gumtreeDiffHandler(old, neww) {
       const xhr = new XMLHttpRequest();
-      xhr.open("PUT", url);// + '?old=' + btoa(old) + '&new=' + btoa(neww));
+      xhr.open("PUT", url);
       xhr.withCredentials = true;
       xhr.setRequestHeader('Access-Control-Allow-Origin', 'http://131.254.17.96:8087');
       xhr.setRequestHeader('Access-Control-Allow-Credentials', 'true');
@@ -69,8 +69,8 @@ export default {
             if (r.error === "java.lang.NullPointerException") {
               reject(r)
             } else {
-              const o = r.actions;
-              o.map(addSide)
+              const o = r;
+              // o.map(addSide)
               resolve(o);
             }
           }
