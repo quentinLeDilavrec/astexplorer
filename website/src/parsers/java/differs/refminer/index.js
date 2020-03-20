@@ -5,7 +5,8 @@ const ID = 'RefactoringMiner';
 const VERSION = '0.0.0';
 const HOMEPAGE = 'https://github.com/tsantalis/RefactoringMiner';
 // const PARSER_SERVICE_URL = 'http://131.254.17.96:8088/RefactoringMiner';
-const PARSER_SERVICE_URL = 'http://131.254.17.96:8095/diff/RefactoringMiner';
+// const PARSER_SERVICE_URL = 'http://131.254.17.96:8095/diff/RefactoringMiner';
+const PARSER_SERVICE_URL = 'http://127.0.0.1:8095/diff/RefactoringMiner';
 
 export default {
   ...defaultParserInterface,

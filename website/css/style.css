@@ -358,7 +358,25 @@ li.entry {
 .CodeMirror .marked,
 .entry.highlighted {
   border-radius: 2px;
-  background-color: rgba(255,240,6,0.4);
+  background-color: hsla(56, 100%, 51%, 0.4);
+}
+
+.CodeMirror .marked-evo-from,
+.entry.highlighted {
+  border-radius: 2px;
+  background-color: hsla(7, 100%, 51%, 0.4);
+}
+
+.CodeMirror .marked-evo-to,
+.entry.highlighted {
+  border-radius: 2px;
+  background-color: hsla(111, 100%, 51%, 0.4);
+}
+
+.CodeMirror .marked-impacted,
+.entry.highlighted {
+  border-radius: 2px;
+  background-color: hsla(157, 100%, 51%, 0.4);
 }
 
 .entry > .value {

@@ -1,13 +1,15 @@
 import React, { Component } from 'react'
 import * as d3 from 'd3'
-import { data, source_data } from './data'
+import PubSub from 'pubsub-js';
+import { data_spoon as data } from './data'
 const ONLY_TESTS_DECLS = false;
 class GraphChart extends Component {
   componentDidMount() {
     // const data = [2, 4, 2, 6, 8]
-    window.reloadGraph = x => {
+    window.reloadGraph = (x,state={}) => {
       console.log("reloadGraph", x, JSON.stringify(x))
       const data = {
+        ...state,
         // nodes: [],
         links: [],
         roots: x.roots,
@@ -78,10 +80,12 @@ class GraphChart extends Component {
         })
       } else {
         data.nodes = []
-        const missing = []
+        const missing = {}
         x.perRoot.forEach(z => {
           z.vertices.forEach(x => {
             x.isRoot = x.id === z.root
+            x.causes2 = []
+            x.effects2 = []
             x.root = z.root
             x.originalId = x.id
             x.id = "" + z.root + " " + x.id
@@ -96,24 +100,49 @@ class GraphChart extends Component {
             x.causes = x.causes.map(y => {
               const tmp = "" + x.root + " " + y;
               data.links.push({
-                target: tmp,
-                source: x
+                target: x,
+                source: tmp
               })
-              if (!data.byId[tmp]) {
-                missing.push({
-                  ...x,
-                  id: tmp,
-                  originalId: y,
-                  root: x.root,
-                  missing: true,
-                })
+              data.byId[tmp] = data.byId[tmp] || {
+                // ...x, 
+                "value": {
+                  "sig": {
+                    "declType": "declType",
+                    "signature": "signature()",
+                    "name": "name",
+                    "id": 111111111111
+                  },
+                  "position": {
+                    "isTest": true,
+                    "file": "file",
+                    "start": 1111111,
+                    "end": 11111111,
+                    "method": {
+                      "declType": "declType",
+                      "signature": "signature",
+                      "name": "name",
+                      "id": 111111111111111
+                    }
+                  }
+                },
+                "causes": x.causes,
+                "effects": x.effects,
+                "isRoot": x.isRoot,
+                "depth": x.depth,
+                causes2: [],
+                effects2: [],
+                name: tmp,
+                id: tmp,
+                originalId: y,
+                root: x.root,
+                missing: true,
               }
               return tmp
             })
           });
-          data.nodes = data.nodes.concat(z.vertices)
+          // data.nodes = data.nodes.concat(z.vertices)
         });
-        data.nodes = data.nodes.concat(missing)
+        data.nodes = Object.values(data.byId);
       }
       return this.drawGraphChart(data);
     }
@@ -121,51 +150,24 @@ class GraphChart extends Component {
   }
   drawGraphChart(data, max_depth) {
     console.log(data, JSON.stringify(data))
-    // const canvasHeight = 400
-    // const canvasWidth = 600
-    // const scale = 30
-
-    // const svgCanvas = d3.select(this.refs.canvas)
-    //   .append("svg")
-    //   .attr("width", 600)
-    //   .attr("height", 400)
-    //   .style("border", "1px solid black")
-
-    // svgCanvas.selectAll("rect")
-    //   .data(data).enter()
-    //   .append("rect")
-    //   .attr("width", 40)
-    //   .attr("height", (datapoint) => datapoint * 20)
-    //   .attr("fill", "orange")
-    //   .attr("x", (datapoint, iteration) => iteration * 45)
-    //   .attr("y", (datapoint) => canvasHeight - datapoint * scale)
-
-    // svgCanvas.selectAll("text")
-    //   .data(data).enter()
-    //   .append("text")
-    //   .attr("x", (dataPoint, i) => i * 45 + 10)
-    //   .attr("y", (dataPoint, i) => canvasHeight - dataPoint * scale - 10)
-    //   .text(dataPoint => dataPoint)
-    //
-    const DIR = '../images/';
     const _this = this;
 
-    let width = 400;//this.refs.canvas.;
+    let width = 400;
     let height = 600;
     let color = d3.scaleOrdinal(d3.schemeCategory10);
 
     const _graph = data
-    document.createElement("div").innerHTML = JSON.stringify(_graph, undefined, '    ');
-    document.createElement("div").addEventListener("input",
-      function () {
-        try {
-          run(JSON.parse(this.value))
-          this.style.backgroundColor = ""
-        } catch (error) {
-          console.error(error)
-          this.style.backgroundColor = "hsl(0,54%,71%)"
-        }
-      })
+    // document.createElement("div").innerHTML = JSON.stringify(_graph, undefined, '    ');
+    // document.createElement("div").addEventListener("input",
+    //   function () {
+    //     try {
+    //       run(JSON.parse(this.value))
+    //       this.style.backgroundColor = ""
+    //     } catch (error) {
+    //       console.error(error)
+    //       this.style.backgroundColor = "hsl(0,54%,71%)"
+    //     }
+    //   })
 
 
     // let label = {
@@ -195,21 +197,43 @@ class GraphChart extends Component {
     // let labelLayout = d3.forceSimulation(label.nodes)
     //     .force("charge", d3.forceManyBody().strength(-50))
     //     .force("link", d3.forceLink(label.links).distance(0).strength(2));
+
+
+
     function run(graph = _graph) {
       _this.refs.canvas &&
         (_this.refs.canvas.innerHTML = '');
+      
+        const zetgzerfg = {}
+        graph.roots.forEach((x,i)=>zetgzerfg[x]=i)
+
       const graphLayout = d3.forceSimulation(graph.nodes)
         // .alphaDecay(1 - Math.pow(0.001, 1 / 100))
         // .force('charge', d3.forceManyBody().strength(.5))
-        .force("charge", d3.forceManyBody().distanceMax(800)
-          .strength(d => isTest(d) ? (d.isTest ? -800 : -800) : -2000))
-        .force("center", d3.forceCenter(width / 2, height / 2))
-        // .force("x", d3.forceX(width / 2).strength(d => isTest(d)?.01:.1))
-        // // .force("y", d3.forceY(height / 2).strength(1))
-        .force("collision", d3.forceCollide(40)
-          // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : 10) * NODE_SIZE)
-          // .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
-        )
+        .force("charge", d3.forceManyBody().distanceMax(1000)
+          // .strength(d => -10000))
+          .strength(d => isTest(d) ? (d.isTest ? -80 : -80) : -5000))
+        //   .strength(d => d.isRoot ? -100 : -50))
+        // .force("test", isolate(
+        //   d3.forceManyBody().distanceMax(800)
+        //     .strength(d => -800),
+        //   function (d) {
+        //     return isTest(d);
+        //   }))
+        // .force("src", isolate(
+        //   d3.forceManyBody().distanceMax(800)
+        //     .strength(d => isTest(d) ? (d.isTest ? -800 : -800) : -2000),
+        //   function (d) {
+        //     return !isTest(d)
+        //   }))
+        // .force("roots", isolate(
+        //   d3.forceManyBody().distanceMax(2000)
+        //     .strength(d => -100000),
+        //   function (d) {
+        //     return d.isRoot
+        //   }))
+        // .force("steelblue", isolate(d3.forceX(width / 6), function(d) { return d.color === "steelblue"; }))
+        // .force("center", d3.forceCenter(width / 2, height / 2))
         .force("y", d3.forceY(d => {
           // if (isTest(d)) {
           //   return 0//y(d.index + 100)
@@ -228,18 +252,68 @@ class GraphChart extends Component {
           }
           return 300 * d.depth
         }).strength(d => isTest(d) ? .8 : 1.))
+        .force("x", d3.forceX(d=>{
+          return zetgzerfg[d.root]*(width/graph.roots.length)*40
+        }).strength(1))
+        // // .force("y", d3.forceY(height / 2).strength(1))
+        // .force("collision", d3.forceCollide(40)
+        //   // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : 10) * NODE_SIZE)
+        //   // .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
+        // )
         .force("link", d3.forceLink(graph.links)
           .id(function (d) { return d.id; })
-          .distance(d => isTest(d) ? 10 : 200).strength(.6))
+          .distance(d => isTest(d) ? 10 : 20).strength(.1));
+
+      // graph.roots.forEach(element => {
+      //   graphLayout.force("g" + element, isolate(
+      //     d3.forceManyBody().distanceMax(10000)
+      //       .strength(d => 5000),
+      //     function (d) {
+      //       return d.root == element
+      //     }))
+      // });
+
+      setTimeout(function () {
+        graphLayout
+        .force("x",null)
+        graphLayout.restart();
+      },1000)
+      setTimeout(function () {
+        graph.roots.forEach(element => {
+          graphLayout.force("g" + element, null)
+        });
+        graphLayout
+        .force("charge", d3.forceManyBody().distanceMax(1000)
+          .strength(d => isTest(d) ? (d.isTest ? -40 : -40) : -5000))
+        .force("link", d3.forceLink(graph.links)
+        .id(function (d) { return d.id; })
+        .distance(d => isTest(d) ? 10 : 20).strength(.8))
+        .force("collision", d3.forceCollide(40)
+          // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : 10) * NODE_SIZE)
+          // .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
+        )
+        graphLayout.restart();
+      },5000)
+
+      graphLayout
         .on("tick", ticked)
         .alpha(3);
 
+      function isolate(force, filter) {
+        var initialize = force.initialize;
+        force.initialize = function () {
+          initialize.call(force, graph.nodes.filter(filter));
+        };
+        return force;
+      }
 
       const adjlist = [];
 
       graph.links.forEach(function (d) {
         adjlist[d.source.index + "-" + d.target.index] = true;
         adjlist[d.target.index + "-" + d.source.index] = true;
+        d.target.causes2.push(d);
+        d.source.effects2.push(d);
       });
 
       function neigh(a, b) {
@@ -255,16 +329,6 @@ class GraphChart extends Component {
           .on("zoom", function () { container.attr("transform", d3.event.transform); })
       );
 
-      const links = container.append("g").attr("class", "links")
-        .selectAll("line")
-        .data(graph.links)
-        .enter()
-        .append("line")
-        .attr("stroke", function (d) {
-          return isTest(d.target) || isTest(d.source) ? "darkgray" : "black"
-        })
-        .attr("stroke-width", "5px");
-
       var filter = svg.append("defs").append("filter")
         .attr("x", "-.03")
         .attr("y", "-.1")
@@ -277,13 +341,28 @@ class GraphChart extends Component {
         .attr("in", "SourceGraphic");
 
       const NODE_SIZE = 40
+
+      const links = container.append("g").attr("class", "links")
+        .selectAll("line")
+        .data(graph.links)
+        // .data([])
+        .enter()
+        .append("line")
+        .attr("stroke", function (d) {
+          return isTest(d.target) || isTest(d.source) ? "darkgray" : "black"
+        })
+        .attr("stroke-width", "5px");
+
       const nodes = container.append("g").attr("class", "nodes")
         .selectAll("g")
         .data(graph.nodes)
+        // .data(graph.roots.map(x => (graph.byId[x + " " + x])))
         .enter()
         .append("g")
         .style("transform-origin", "center");
+
       nodes.call(addContent);
+
       function addContent(/** @type {d3.Selection<SVGGElement, any, SVGGElement, any>} */node) {
         if (true) {
           node
@@ -368,18 +447,18 @@ class GraphChart extends Component {
       // node.on("mouseover", focus).on("mouseout", unfocus);
 
 
-      const linksText =
-        container.append("g").attr("class", "labels")
-          .selectAll("text")
-          .data(graph.links)
-          .enter()
-          .append("text")
-          .attr("class", "link-label")
-          .attr("font-family", "Arial, Helvetica, sans-serif")
-          .attr("fill", "black")
-          .style("font", "bold 14px Arial")
-          .attr("dy", ".35em")
-          .attr("text-anchor", "middle")
+      // const linksText =
+      //   container.append("g").attr("class", "labels")
+      //     .selectAll("text")
+      //     .data(graph.links)
+      //     .enter()
+      //     .append("text")
+      //     .attr("class", "link-label")
+      //     .attr("font-family", "Arial, Helvetica, sans-serif")
+      //     .attr("fill", "black")
+      //     .style("font", "bold 14px Arial")
+      //     .attr("dy", ".35em")
+      //     .attr("text-anchor", "middle")
       // .text(function (d) {
       //   return d.count && d.count > 1 ? "" + d.count : "";
       // });
@@ -393,15 +472,73 @@ class GraphChart extends Component {
 
       nodes.on("dblclick", dblclick)
 
-      function getRoot(id) {
-        const d = graph.byId[id];
-        return d.causes.length === 0 ? d : getRoot(d.causes[0])
+      // nodes.call(incremental)
+      // setTimeout(function () {
+      //   graphLayout.force("charge", d3.forceManyBody().distanceMax(1000)
+      //     // .strength(d => isTest(d) ? (d.isTest ? -800 : -800) : -2000))
+      //     .strength(d => d.isRoot ? -1000 : -500))
+      //   graphLayout.restart();
+      //   setTimeout(function () {
+      //   }, 10000)
+      // }, 10000)
+      const cont_nodes = container.select(".nodes")
+      const cont_links = container.select(".links")
+      /**
+       * 
+       * @param {d3.Selection} currents 
+       */
+      function incremental(currents) {
+        setTimeout(function () {
+          currents.each(function (x) {
+            x.effects2.forEach(eff => {
+              const e = eff.target
+              const n = addNode(e, x)
+              addLink(eff)
+              n.call(incremental)
+            })
+          })
+          // graphLayout.alpha(1);
+          // graphLayout.restart();
+        },
+          3
+        )
+      }
+      function addNode(x, y) {
+        return cont_nodes.append("g")
+          .datum(x)//{...x, "x":y.x,"y":y.y,"vx":y.vx,"vy":y.vy})
+          .style("transform-origin", "center")
+          .attr("transform", function (d) {
+            d.x = y.x
+            d.y = y.y
+            return "translate(" + fixna(d.x) + "," + fixna(d.y) + ")";
+          })
+          .call(addContent)
+          .call(
+            d3.drag()
+              .on("start", dragstarted)
+              .on("drag", dragged)
+              .on("end", dragended)
+          )
+          .on("dblclick", dblclick);
+      }
+      function addLink(x) {
+        return cont_links.append("line")
+          .datum(x)
+          .attr("stroke", function (d) {
+            return isTest(d.target) || isTest(d.source) ? "darkgray" : "black"
+          })
+          .attr("stroke-width", "5px");
       }
 
       function dblclick(d) {
-        PubSub.publish("CHANGE_DIFF_CONTEXT", { node: d, root: d.causes.length === 0 ? d : getRoot(d.causes[0]) })
+        PubSub.publish("CHANGE_DIFF_CONTEXT", { node: d})//, root: d.causes.length === 0 ? d : getRoot(d.causes[0]) })
       }
 
+      // function getRoot(id) {
+      //   const d = graph.byId[id];
+      //   return d.causes.length === 0 ? d : getRoot(d.causes[0])
+      // }
+      
       // let labelNode = container.append("g").attr("class", "labelNodes")
       //     .selectAll("text")
       //     .data(label.nodes)
@@ -416,9 +553,9 @@ class GraphChart extends Component {
       // node.on("mouseover", focus).on("mouseout", unfocus);
 
       function ticked() {
-        nodes && nodes.call(updateNode);
-        links && links.call(updateLink);
-        linksText && linksText.call(updateLinkText);
+        container.select(".nodes").selectAll("g") && container.selectAll(".nodes").selectAll("g").call(updateNode);
+        container.selectAll(".links").selectAll("line") && container.selectAll(".links").selectAll("line").call(updateLink);
+        container.selectAll(".labels") && container.selectAll(".labels").selectAll("text") && container.selectAll(".labels").selectAll("text").call(updateLinkText);
         if (!nodes && !links) {
           graphLayout.stop()
         }
@@ -477,7 +614,7 @@ class GraphChart extends Component {
       }
 
       function updateLinkText(link) {
-        linksText
+        link
           .attr("x", function (d) {
             return ((d.source.x + d.target.x) / 2);
           })

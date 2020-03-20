@@ -147,9 +147,12 @@ sagaMiddleware.run(saga, new StorageHandler([gist, parse]));
 
 
 window.currentTarget = window.currentTarget || {
-  repo: "https://github.com/Graylog2/graylog2-server.git",
-  commitIdBefore: "904f8e2a49f8ded1b16ab52e37588592e02da71c",
-  commitIdAfter: "767171c90110c4c5781e8f6d19ece1fba0d492e9"
+  // repo: "https://github.com/Graylog2/graylog2-server.git",
+  // commitIdBefore: "904f8e2a49f8ded1b16ab52e37588592e02da71c",
+  // commitIdAfter: "767171c90110c4c5781e8f6d19ece1fba0d492e9"
+  repo: "https://github.com/INRIA/spoon.git",
+  commitIdBefore: "4b42324566bdd0da145a647d136a2f555c533978",
+  commitIdAfter: "904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b"
 };
 {
   const [repo, before, after] = window.prompt("target", window.currentTarget.repo + ';' + window.currentTarget.commitIdBefore + ';' + window.currentTarget.commitIdAfter).split(/;/);

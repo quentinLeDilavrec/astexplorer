@@ -207,24 +207,84 @@ const LAYOUT = {
   ]
 }
 
-function node2file(node, repo, commitId) {
-  if (!node.value.position.file) {
-    return;
+function node2file(position, repo, commitId, marking) {
+  return {
+    repo: repo, commitId: commitId, path: position.file,
+    start: position.start, end: position.end,
+    marking: marking
   }
-  return { repo: repo, commitId: commitId, path: node.value.position.file }
+}
+
+function node2diff(node, repo, commitIdBefore, commitIdAfter, focus, marking) {
+  const r = {
+    before: node2file(node, repo, commitIdBefore, marking),
+    after: node2file(node, repo, commitIdAfter, marking)
+  }
+  if (!focus) {
+    r.before.focus = true
+    r.after.focus = true
+  } else
+    r[focus].focus = true
+  return r
+}
+
+function isTest(d) {
+  return d.isTest || (d.value
+    && d.value.position
+    && d.value.position.isTest)
+}
+
+function findimpactedTests(node, max_depth = Infinity) {
+  // TODO do not rely on d3 to mocve in the graph
+  const r = []
+  const stack = [node]
+  const dstack = [0]
+  while (stack.length > 0) {
+    const curr = stack.shift()
+    const depth = dstack.shift()
+    if (isTest(curr)) {
+      r.push(curr)
+    } else if (depth <= max_depth) {
+      stack.push(...(curr.effects2.map(x => x.target)));
+      dstack.push(...(curr.effects2.map(x => depth + 1)));
+    }
+  }
+  return r
+}
+
+function findRoot(node) {
+  // TODO do not rely on d3 to mocve in the graph
+  const r = []
+  const stack = [node]
+  while (stack.length > 0) {
+    const curr = stack.pop()
+    if (curr.isRoot) {
+      r.push(curr)
+    } else {
+      stack.push(...(curr.causes2.map(x => x.source)));
+    }
+  }
+  return r
+}
+function formatEvolution(evolution) {
+  debugger
+  return {}
 }
 
 function graphNodesToSecenario(graphNodes, repo, commitIdBefore, commitIdAfter) {
-  const { node, root } = graphNodes
+  const { node } = graphNodes
+  const impactedTests = findimpactedTests(node)
+  const root = findRoot(node)[0] // TODO generalize all get(0), a move is a 1 to 1 ref but an extract is apriori a n to n.
+  // const formatedEvolution = formatEvolution(root.evolution)
   return {
+    // ...formatedEvolution,
     type: 'move', what: 'method',
-    from: node2file(node, repo, commitIdBefore),
-    to: node2file(node, repo, commitIdAfter),
-    impacts: [
-      node2file(node, repo, commitIdBefore),
-      node2file(node, repo, commitIdBefore), // TODO remove duplicates
-      node2file(node, repo, commitIdBefore), // TODO remove duplicates
-    ]
+    from: node2diff(root.evolution.before[0], repo, commitIdBefore, root.evolution.commitId, 'before', 'marked-evo-from'),
+    to: node2diff(root.evolution.after[0], repo, commitIdBefore, root.evolution.commitId, 'after', 'marked-evo-to'),
+    // from: node2file(root.evolution.before[0], repo, commitIdBefore),
+    // to: node2file(root.evolution.after[0], repo, root.evolution.commitId || commitIdAfter), // TODO remove || commitIdAfter
+    impacts:
+      impactedTests.slice(0, 3).map(x => node2diff(x.value.position, repo, commitIdBefore, root.evolution.commitId, 'before', 'marked-impacted'))
   }
 }
 
@@ -236,11 +296,8 @@ function scenario2Layout(scenario) {
         {
           orientation: ORIENTATION.horizontal,
           content: [
-            {
-              before: scenario.from,
-              after: scenario.to
-            }
-
+            scenario.from,
+            scenario.to
           ]
         },
         {
@@ -254,7 +311,8 @@ function scenario2Layout(scenario) {
   }
 }
 
-const SERVICE_URL = 'http://131.254.17.96:8095/data/default';
+// const SERVICE_URL = 'http://131.254.17.96:8095/data/default';
+const SERVICE_URL = 'http://127.0.0.1:8095/data/default';
 
 async function getContent(repo, commitId, path, mode) {
   console.log(4982, arguments)
@@ -276,7 +334,7 @@ async function getContent(repo, commitId, path, mode) {
         }
         const r = JSON.parse(xhr.response)
         if (r.error) {
-          reject(r)
+          reject(r.error)
         } else {
           resolve(r);
         }
@@ -292,8 +350,13 @@ async function getContent(repo, commitId, path, mode) {
         path: path
       }));
     })
-    .then(x => (console.log(79475, repo, commitId, path, mode, x), CodeMirror.Doc(x.content, mode)))
-    .catch(x => (console.log(80805, repo, commitId, path, mode, x), CodeMirror.Doc(x, "html")));
+    .then(x => {
+      return CodeMirror.Doc(x.content, mode)
+    })
+    .catch(x => {
+      console.error(x)
+      return CodeMirror.Doc(x)
+    });
 }
 
 function resize() {
@@ -310,7 +373,7 @@ export default class MultiEditor extends React.Component {
       mode: props.mode,
     };
     this._layoutRenderer = this._layoutRenderer.bind(this);
-    this.handleScenarioChange = this.handleScenarioChange.bind(this);
+    // this.handleScenarioChange = this.handleScenarioChange.bind(this);
   }
 
   _layoutRenderer(x) {
@@ -345,18 +408,9 @@ export default class MultiEditor extends React.Component {
             content: x.content.slice(x.content.length / 2)
           })}
         </SplitPane>);
-        // return (<SplitPane
-        //   className="splitpane"
-        //   vertical={true}
-        //   onResize={resize}>
-        //   {this._layoutRenderer(x.content[0])}
-        //   {this._layoutRenderer({
-        //     orientation: x.orientation,
-        //     content: x.content.slice(1)
-        //   })}
-        // </SplitPane>);
       }
     } else if (typeof x.before === 'object' && typeof x.after === 'object') {
+      // TODO enable wrapping in codemirrors
       return (<DiffEditor
         // {...this.props}
         value={"Getting content..."}
@@ -364,10 +418,12 @@ export default class MultiEditor extends React.Component {
         // value={x.after.content}
         // oldvalue={x.before.content}
         ref={async (y) => {
-          y && y.setMirrorsValue({
-            before: await getContent(x.after.repo, x.after.commitId, x.after.path, this.props.mode),
-            after: await getContent(x.before.repo, x.before.commitId, x.before.path, this.props.mode)
-          })
+          if (y) {
+            y.setMirrorsValue({
+              before: { ...x.before, doc: await getContent(x.before.repo, x.before.commitId, x.before.path, this.props.mode) },
+              after: { ...x.after, doc: await getContent(x.after.repo, x.after.commitId, x.after.path, this.props.mode) }
+            })
+          }
           return y
         }}
         mode={this.props.mode} />)
@@ -375,7 +431,13 @@ export default class MultiEditor extends React.Component {
       return (<Editor
         value={"Getting content..."}
         ref={async (y) => {
-          y && y.setMirrorValue(await getContent(x.repo, x.commitId, x.path, this.props.mode))
+          if (y) {
+            const content = await getContent(x.repo, x.commitId, x.path, this.props.mode)
+            y.setMirrorValue({
+              ...x,
+              doc: content,
+            })
+          }
           return y
         }}
         mode={this.props.mode} />)
@@ -408,9 +470,9 @@ export default class MultiEditor extends React.Component {
   }
 
 
-  shouldComponentUpdate() {
-    return false;
-  }
+  // shouldComponentUpdate() {
+  //   return false;
+  // }
 
   getValue() {
     return this.codeMirror && (this.state.value = this.codeMirror.getValue());
@@ -494,7 +556,12 @@ export default class MultiEditor extends React.Component {
       PubSub.subscribe('CHANGE_DIFF_CONTEXT', (_, graphNodes) => {
         const { node, root } = graphNodes
         console.log(684, node, root)
-        this.handleScenarioChange(graphNodesToSecenario(graphNodes, window.currentTarget.repo, window.currentTarget.commitIdBefore, window.currentTarget.commitIdAfter))
+        const x = graphNodesToSecenario(graphNodes, window.currentTarget.repo, window.currentTarget.commitIdBefore, window.currentTarget.commitIdAfter)
+
+        this.setState({
+          ...this.state,
+          value: x,
+        })
       }),
     );
 
@@ -581,12 +648,6 @@ export default class MultiEditor extends React.Component {
   //   debugger
   // }
 
-  handleScenarioChange(x) {
-    this.setState({
-      ...this.state,
-      value: x,
-    })
-  }
 
   _bindCMHandler(event, handler, side) {
     this._CMHandlers.push([event, handler, side ? side : ""]);

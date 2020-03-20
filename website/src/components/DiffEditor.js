@@ -97,14 +97,46 @@ export default class DiffEditor extends React.Component {
     return this.codeMirror && (this.state.oldvalue = this.codeMirror.edit.state.diffViews[0].orig.getValue());
   }
 
+  /**
+   * 
+   * @param {CodeMirror.Editor} editor 
+   * @param {number} start 
+   * @param {number} end 
+   */
+  scrollTo(editor, start, end, marking) {
+    const from = editor.posFromIndex(start)
+    const to = editor.posFromIndex(end)
+    const fromS = editor.charCoords(from, "local");
+    const toS = editor.charCoords(to, "local");
+    const info = editor.getScrollInfo();
+    const left = Math.min(fromS.left, toS.left)
+    const right = Math.max(fromS.right, toS.right)
+    // editor.scrollTo((left + (right - left) / 2) - info.clientWidth / 2, (fromS.top + (toS.bottom - fromS.top) / 2) - info.clientHeight / 2);
+    editor.scrollTo(left- info.clientWidth / 10, fromS.top- info.clientHeight / 10);
+    editor.markText(
+      from, to,
+      { className: marking },
+    )
+  }
+
   setMirrorsValue({ before, after }) {
-    return {
-      before: this.codeMirror && (this.state.value = after)
-        && this.codeMirror.editor()
-        && this.codeMirror.editor().swapDoc(after),
-      after: this.codeMirror && (this.state.oldvalue = before)
-        && this.codeMirror.leftOriginal()
-        && this.codeMirror.leftOriginal().swapDoc(before)
+    // this.codeMirror.setShowDifferences(false); // TODO if a panel is empty fallback to standard editor or dissable diff
+    if (this.codeMirror && (this.state.value = after.doc) && this.codeMirror.editor() &&
+      (this.state.oldvalue = before.doc) && this.codeMirror.leftOriginal()) {
+      const r = {
+        before: this.codeMirror.leftOriginal().swapDoc(before.doc),
+        after: this.codeMirror.editor().swapDoc(after.doc),
+      }
+      if (before.focus && after.focus) {
+        this.codeMirror
+      }
+      if (before.focus) {
+        this.scrollTo(this.codeMirror.leftOriginal(), before.start, before.end + 1, before.marking);
+      }
+      if (after.focus) {
+        this.scrollTo(this.codeMirror.editor(), after.start, after.end + 1, after.marking);
+      }
+      return r;
     }
   }
 

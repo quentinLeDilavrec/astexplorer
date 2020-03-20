@@ -29,7 +29,7 @@ export default class Editor extends React.Component {
   UNSAFE_componentWillReceiveProps(nextProps) {
     if (nextProps.value !== this.state.value) {
       this.setState(
-        {value: nextProps.value},
+        { value: nextProps.value },
         () => this.codeMirror.setValue(nextProps.value),
       );
     }
@@ -63,14 +63,14 @@ export default class Editor extends React.Component {
       if (oldError) {
         let lineNumber = this._getErrorLine(oldError);
         if (lineNumber) {
-          this.codeMirror.removeLineClass(lineNumber-1, 'text', 'errorMarker');
+          this.codeMirror.removeLineClass(lineNumber - 1, 'text', 'errorMarker');
         }
       }
 
       if (error) {
         let lineNumber = this._getErrorLine(error);
         if (lineNumber) {
-          this.codeMirror.addLineClass(lineNumber-1, 'text', 'errorMarker');
+          this.codeMirror.addLineClass(lineNumber - 1, 'text', 'errorMarker');
         }
       }
     }
@@ -130,7 +130,7 @@ export default class Editor extends React.Component {
       this._markerRange = null;
       this._mark = null;
       this._subscriptions.push(
-        PubSub.subscribe('HIGHLIGHT', (_, {range}) => {
+        PubSub.subscribe('HIGHLIGHT', (_, { range }) => {
           if (!range) {
             return;
           }
@@ -148,11 +148,11 @@ export default class Editor extends React.Component {
           this._mark = this.codeMirror.markText(
             start,
             end,
-            {className: 'marked'},
+            { className: 'marked' },
           );
         }),
 
-        PubSub.subscribe('CLEAR_HIGHLIGHT', (_, {range}={}) => {
+        PubSub.subscribe('CLEAR_HIGHLIGHT', (_, { range } = {}) => {
           if (!range ||
             this._markerRange &&
             range[0] === this._markerRange[0] &&
@@ -183,10 +183,49 @@ export default class Editor extends React.Component {
     this.codeMirror = null;
   }
 
+  /**
+   * 
+   * @param {CodeMirror.Editor} editor 
+   * @param {number} start 
+   * @param {number} end 
+   */
+  scrollTo(editor, start, end, marking) {
+    const from = editor.posFromIndex(start)
+    const to = editor.posFromIndex(end)
+    const fromS = editor.charCoords(from, "local");
+    const toS = editor.charCoords(to, "local");
+    const info = editor.getScrollInfo();
+    const left = Math.min(fromS.left, toS.left)
+    const right = Math.max(fromS.right, toS.right)
+    // editor.scrollTo((left + (right - left) / 2) - info.clientWidth / 2, (fromS.top + (toS.bottom - fromS.top) / 2) - info.clientHeight / 2);
+    editor.scrollTo(left, fromS.top);
+    editor.markText(
+      from, to,
+      { className: marking },
+    )
+  }
+  setMirrorValue(param) {
+    const { doc: value, start, end, marking } = param
+    if (this.codeMirror && (this.state.value = value)) {// TODO should not set state manually
+      const r = this.codeMirror.swapDoc(value)
+      // const {line:startl,ch:startc} = this.codeMirror.posFromIndex(start)
+      // const {line:endl,ch:endc} = this.codeMirror.posFromIndex(end)
+      this.scrollTo(this.codeMirror, start, end + 1, marking)
+      return r
+    }
 
-  setMirrorValue(value) {
-    return ( this.codeMirror && (this.state.value = value) // TODO should not set state manually
-        && this.codeMirror.swapDoc(value))
+    // if (this.codeMirror) {
+    //   if (typeof value === "string") {
+    //     this.state.value = value
+    //     const r = this.codeMirror.swapDoc(value)
+    //   } else if (value) {
+    //     const { doc: value, start, end } = value
+    //     this.state.value = value // TODO should not set state manually
+    //     const r = this.codeMirror.swapDoc(value)
+    //     this.codeMirror.scrollIntoView(this.codeMirror.posFromIndex(start + (end - start) / 2))
+    //     return r
+    //   }
+    // }
   }
 
   _bindCMHandler(event, handler) {
@@ -197,7 +236,7 @@ export default class Editor extends React.Component {
   _unbindHandlers() {
     const cmHandlers = this._CMHandlers;
     for (let i = 0; i < cmHandlers.length; i += 2) {
-      this.codeMirror.off(cmHandlers[i], cmHandlers[i+1]);
+      this.codeMirror.off(cmHandlers[i], cmHandlers[i + 1]);
     }
     this._subscriptions.forEach(PubSub.unsubscribe);
   }
@@ -209,7 +248,7 @@ export default class Editor extends React.Component {
       cursor: doc.indexFromPos(doc.getCursor()),
     };
     this.setState(
-      {value: args.value},
+      { value: args.value },
       () => this.props.onContentChange(args),
     );
   }
@@ -222,7 +261,7 @@ export default class Editor extends React.Component {
 
   render() {
     return (
-      <div className="editor" ref={c => this.container = c}/>
+      <div className="editor" ref={c => this.container = c} />
     );
   }
 }
@@ -248,6 +287,6 @@ Editor.defaultProps = {
   readOnly: false,
   mode: 'javascript',
   keyMap: 'default',
-  onContentChange: () => {},
-  onActivity: () => {},
+  onContentChange: () => { },
+  onActivity: () => { },
 };
