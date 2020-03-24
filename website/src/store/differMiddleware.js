@@ -21,15 +21,16 @@ export default store => next => action => {
   const newState = store.getState();
 
   const newDiffer = getDiffer(newState);
+  const oldCode = getDiffCode(newState);
   const newParserSettings = getParserSettings(newState); // TODO get settings
   const newCode = getCode(newState); 
-  const oldCode = getDiffCode(newState);
   // debugger
   if (
-    action.type === 'INIT' ||
+    oldState.showDiffPanel &&
+    (action.type === 'INIT' ||
     getParser(oldState) !== newDiffer ||
     getParserSettings(oldState) !== newParserSettings ||
-    getCode(oldState) !== newCode
+    getCode(oldState) !== newCode)
   ) {
     if (!newDiffer || newCode == null) {
       return;

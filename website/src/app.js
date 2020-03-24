@@ -132,7 +132,7 @@ const store = createStore(
   enableBatching(astexplorer),
   revive(LocalStorage.readState()),
   composeEnhancers(
-    applyMiddleware(sagaMiddleware, parserMiddleware, differMiddleware),
+    applyMiddleware(sagaMiddleware, parserMiddleware),
   ),
 );
 store.subscribe(debounce(() => {
@@ -155,13 +155,16 @@ window.currentTarget = window.currentTarget || {
   commitIdAfter: "904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b"
 };
 {
-  const [repo, before, after] = window.prompt("target", window.currentTarget.repo + ';' + window.currentTarget.commitIdBefore + ';' + window.currentTarget.commitIdAfter).split(/;/);
+  const r = window.prompt("target", window.currentTarget.repo + ';' + window.currentTarget.commitIdBefore + ';' + window.currentTarget.commitIdAfter)
+  if (r){
+    const [repo, before, after] = r.split(/;/);
 
-  window.currentTarget = {
-    repo: repo,
-    commitIdBefore: before,
-    commitIdAfter: after
-  };
+    window.currentTarget = {
+      repo: repo,
+      commitIdBefore: before,
+      commitIdAfter: after
+    };
+  }
   /*
   on open JDK 8
 https://github.com/INRIA/spoon.git;4b42324566bdd0da145a647d136a2f555c533978;904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b

@@ -6,10 +6,9 @@ import 'codemirror/keymap/sublime';
 import PropTypes from 'prop-types';
 import PubSub from 'pubsub-js';
 import React from 'react';
-import ReactDOM from 'react-dom';
 import SplitPane from './SplitPane';
 // import CodeEditorContainer from '../container/CodeEditorContainer';
-import Editor from './Editor';
+import Editor2 from './Editor2';
 import DiffEditor from './DiffEditor';
 
 const defaultPrettierOptions = {
@@ -428,7 +427,7 @@ export default class MultiEditor extends React.Component {
         }}
         mode={this.props.mode} />)
     } else if (typeof x.path === 'string') {
-      return (<Editor
+      return (<Editor2
         value={"Getting content..."}
         ref={async (y) => {
           if (y) {

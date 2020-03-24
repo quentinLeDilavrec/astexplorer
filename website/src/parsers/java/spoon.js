@@ -20,7 +20,6 @@ export default {
   loadParser(callback) {
     const url = PARSER_SERVICE_URL;
     callback(function spoonParsingHandler(code) {
-
       const xhr = new XMLHttpRequest();
       xhr.open("PUT", url);
       xhr.withCredentials = true;
