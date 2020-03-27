@@ -35,7 +35,7 @@ import parserMiddleware from './store/parserMiddleware';
 import differMiddleware from './store/differMiddleware';
 
 import 'diff-match-patch'
-import GraphChart from './components/GraphOutput';
+import GraphChart from './containers/GraphOutputContainer';
 
 function resize() {
   PubSub.publish('PANEL_RESIZE');
