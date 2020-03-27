@@ -206,18 +206,27 @@ const LAYOUT = {
   ]
 }
 
-function node2file(position, repo, commitId, marking) {
+/**
+ * 
+ * @param {any[]} positions should share the same file value
+ * @param {string} repo 
+ * @param {string} commitId 
+ * @param {string|string[]} marking 
+ */
+function node2file(nodes, repo, commitId, marking) {
+  if (typeof nodes.file === "string") {
+    nodes = [nodes]
+  }
   return {
-    repo: repo, commitId: commitId, path: position.file,
-    start: position.start, end: position.end,
-    marking: marking
+    repo: repo, commitId: commitId, path: nodes[0].file,
+    ranges: nodes.map(x => ({ start: x.start, end: x.end, marking: marking })),
   }
 }
 
-function node2diff(node, repo, commitIdBefore, commitIdAfter, focus, marking) {
+function node2diff(nodes, repo, commitIdBefore, commitIdAfter, focus, marking) {
   const r = {
-    before: node2file(node, repo, commitIdBefore, marking),
-    after: node2file(node, repo, commitIdAfter, marking)
+    before: node2file(nodes, repo, commitIdBefore, marking),
+    after: node2file(nodes, repo, commitIdAfter, marking)
   }
   if (!focus) {
     r.before.focus = true
@@ -265,25 +274,33 @@ function findRoot(node) {
   }
   return r
 }
-function formatEvolution(evolution) {
-  debugger
-  return {}
-}
+
+const UNSPEC_TYPE = 'move';
+const UNSPEC_WHAT = 'something';
 
 function graphNodesToSecenario(graphNodes, repo, commitIdBefore, commitIdAfter) {
   const { node } = graphNodes
   const impactedTests = findimpactedTests(node)
   const root = findRoot(node)[0] // TODO generalize all get(0), a move is a 1 to 1 ref but an extract is apriori a n to n.
-  // const formatedEvolution = formatEvolution(root.evolution)
+  // TODO change from and to semantic to something like removed, inserted, considered. As left side of a diff is the "from" and rigth is the "to" 
+  if (root.evolution.type === "Move Method") {
   return {
-    // ...formatedEvolution,
     type: 'move', what: 'method',
-    from: node2diff(root.evolution.before[0], repo, commitIdBefore, root.evolution.commitId, 'before', 'marked-evo-from'),
-    to: node2diff(root.evolution.after[0], repo, commitIdBefore, root.evolution.commitId, 'after', 'marked-evo-to'),
-    // from: node2file(root.evolution.before[0], repo, commitIdBefore),
-    // to: node2file(root.evolution.after[0], repo, root.evolution.commitId || commitIdAfter), // TODO remove || commitIdAfter
+      from: node2diff(root.evolution.before[0], repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from'),
+      to: node2diff(root.evolution.after[0], repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to'),
+      impacts:
+        impactedTests.slice(0, 3).map(x => node2diff(x.value.position, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
+    }
+  } else {
+    return {
+      type: UNSPEC_TYPE, what: UNSPEC_WHAT,
+      before: root.evolution.before.map(x =>
+        node2diff(x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from')),
+      after: root.evolution.after.map(x =>
+        node2diff(x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to')),
     impacts:
-      impactedTests.slice(0, 3).map(x => node2diff(x.value.position, repo, commitIdBefore, root.evolution.commitId, 'before', 'marked-impacted'))
+        impactedTests.slice(0, 3).map(x => node2diff(x.value.position, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
+    }
   }
 }
 
@@ -305,8 +322,29 @@ function scenario2Layout(scenario) {
         }
       ]
     }
+  } else if (scenario.type === UNSPEC_TYPE && scenario.what === UNSPEC_WHAT) {
+    return {
+      orientation: ORIENTATION.vertical,
+      content: [
+        {
+          orientation: ORIENTATION.horizontal,
+          content: [
+            ...scenario.before,
+            ...scenario.after
+          ]
+        },
+        {
+          orientation: ORIENTATION.horizontal,
+          content: scenario.impacts
+        }
+      ]
+    }
   } else {
-    return LAYOUT;
+    return {
+      orientation: ORIENTATION.vertical,
+      content: [
+      ]
+    };
   }
 }
 
@@ -375,26 +413,29 @@ export default class MultiEditor extends React.Component {
     // this.handleScenarioChange = this.handleScenarioChange.bind(this);
   }
 
-  _layoutRenderer(x) {
+  _layoutRenderer(x, key) {
     console.log(3, this)
     if (x.orientation === ORIENTATION.vertical) {
       return (
         <SplitPane
+          key={key}
           className="splitpane"
           onResize={resize}>
-          {x.content.map(x => this._layoutRenderer(x))}
+          {x.content.map((x, i) => this._layoutRenderer(x, i))}
         </SplitPane>
       );
     } else if (x.orientation === ORIENTATION.horizontal) {
       if (x.content.length <= 2) {
         return (<SplitPane
+          key={key}
           className="splitpane"
           vertical={true}
           onResize={resize}>
-          {x.content.map(x => this._layoutRenderer(x))}
+          {x.content.map((x, i) => this._layoutRenderer(x, i))}
         </SplitPane>);
       } else {
         return (<SplitPane
+          key={key}
           className="splitpane"
           vertical={true}
           onResize={resize}>
@@ -411,6 +452,7 @@ export default class MultiEditor extends React.Component {
     } else if (typeof x.before === 'object' && typeof x.after === 'object') {
       // TODO enable wrapping in codemirrors
       return (<DiffEditor
+        key={key}
         // {...this.props}
         value={"Getting content..."}
         oldvalue={"Getting content..."}
@@ -428,6 +470,7 @@ export default class MultiEditor extends React.Component {
         mode={this.props.mode} />)
     } else if (typeof x.path === 'string') {
       return (<Editor2
+        key={key}
         value={"Getting content..."}
         ref={async (y) => {
           if (y) {

@@ -100,23 +100,37 @@ export default class DiffEditor extends React.Component {
   /**
    * 
    * @param {CodeMirror.Editor} editor 
-   * @param {number} start 
-   * @param {number} end 
+   * @param {CodeMirror.Position} from 
    */
-  scrollTo(editor, start, end, marking) {
-    const from = editor.posFromIndex(start)
-    const to = editor.posFromIndex(end)
+  scrollTo(editor, from) {
     const fromS = editor.charCoords(from, "local");
-    const toS = editor.charCoords(to, "local");
     const info = editor.getScrollInfo();
-    const left = Math.min(fromS.left, toS.left)
-    const right = Math.max(fromS.right, toS.right)
+    // const right = Math.max(fromS.right, toS.right)
     // editor.scrollTo((left + (right - left) / 2) - info.clientWidth / 2, (fromS.top + (toS.bottom - fromS.top) / 2) - info.clientHeight / 2);
-    editor.scrollTo(left- info.clientWidth / 10, fromS.top- info.clientHeight / 10);
-    editor.markText(
-      from, to,
-      { className: marking },
-    )
+    editor.scrollTo(fromS.left - info.clientWidth / 10, fromS.top - info.clientHeight / 10);
+  }
+  /**
+   * 
+   * @param {CodeMirror.Editor} editor 
+   * @param {{start:number,end:number}[]} ranges 
+   */
+  markIt(editor, ranges) {
+    let first = Infinity;
+    for (let i = 0; i < ranges.length; i++) {
+      const start = ranges[i].start;
+      const end = ranges[i].end;
+      first = Math.min(first, start)
+      const from = editor.posFromIndex(start)
+      const to = editor.posFromIndex(end + 1)
+      editor.markText(
+        from, to,
+        {
+          className: ranges[i].marking,
+          // shared:true // useful ?
+        },
+      )
+    }
+    this.scrollTo(editor, editor.posFromIndex(first));
   }
 
   setMirrorsValue({ before, after }) {
@@ -128,13 +142,13 @@ export default class DiffEditor extends React.Component {
         after: this.codeMirror.editor().swapDoc(after.doc),
       }
       if (before.focus && after.focus) {
-        this.codeMirror
+        this.codeMirror // TODO unsync diff viewer
       }
       if (before.focus) {
-        this.scrollTo(this.codeMirror.leftOriginal(), before.start, before.end + 1, before.marking);
+        this.markIt(this.codeMirror.leftOriginal(), before.ranges);
       }
       if (after.focus) {
-        this.scrollTo(this.codeMirror.editor(), after.start, after.end + 1, after.marking);
+        this.markIt(this.codeMirror.editor(), after.ranges);
       }
       return r;
     }
@@ -171,7 +185,6 @@ export default class DiffEditor extends React.Component {
 
     this._CMHandlers = [];
     this._subscriptions = [];
-    console.log(77, this.state.value)
     this.codeMirror = CodeMirror.MergeView( // eslint-disable-line new-cap
       this.container,
       {
@@ -224,7 +237,6 @@ export default class DiffEditor extends React.Component {
     this._subscriptions.push(
       PubSub.subscribe('PANEL_RESIZE', () => {
         if (this.codeMirror) {
-          console.log(7, this)
           this.codeMirror.edit.refresh();
           this.codeMirror.edit.state.diffViews[0].orig.refresh();
 
@@ -242,7 +254,6 @@ export default class DiffEditor extends React.Component {
           if (!range) {
             return;
           }
-          console.log(1243, this.codeMirror, this.codeMirror.edit.state.diffViews[0].orig)
           let docRight = this.codeMirror.edit.getDoc();
           let docLeft = this.codeMirror.edit.state.diffViews[0].orig.getDoc();
           this._markerRange = range;

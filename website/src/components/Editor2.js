@@ -186,31 +186,45 @@ export default class Editor2 extends React.Component {
   /**
    * 
    * @param {CodeMirror.Editor} editor 
-   * @param {number} start 
-   * @param {number} end 
+   * @param {CodeMirror.Position} from 
    */
-  scrollTo(editor, start, end, marking) {
-    const from = editor.posFromIndex(start)
-    const to = editor.posFromIndex(end)
+  scrollTo(editor, from) {
     const fromS = editor.charCoords(from, "local");
-    const toS = editor.charCoords(to, "local");
     const info = editor.getScrollInfo();
-    const left = Math.min(fromS.left, toS.left)
-    const right = Math.max(fromS.right, toS.right)
+    // const right = Math.max(fromS.right, toS.right)
     // editor.scrollTo((left + (right - left) / 2) - info.clientWidth / 2, (fromS.top + (toS.bottom - fromS.top) / 2) - info.clientHeight / 2);
-    editor.scrollTo(left, fromS.top);
-    editor.markText(
-      from, to,
-      { className: marking },
-    )
+    editor.scrollTo(fromS.left - info.clientWidth / 10, fromS.top - info.clientHeight / 10);
   }
+  /**
+   * 
+   * @param {CodeMirror.Editor} editor 
+   * @param {{start:number,end:number}[]} ranges 
+   */
+  markIt(editor, ranges) {
+    let first = Infinity;
+    for (let i = 0; i < ranges.length; i++) {
+      const start = ranges[i].start;
+      const end = ranges[i].end;
+      first = Math.min(first, start)
+      const from = editor.posFromIndex(start)
+      const to = editor.posFromIndex(end + 1)
+      editor.markText(
+        from, to,
+        {
+          className: ranges[i].marking,
+          // shared:true // useful ?
+        },
+      )
+    }
+    this.scrollTo(editor, editor.posFromIndex(first));
+  }
+
+
   setMirrorValue(param) {
-    const { doc: value, start, end, marking } = param
+    const { doc: value, ranges } = param
     if (this.codeMirror && (this.state.value = value)) {// TODO should not set state manually
       const r = this.codeMirror.swapDoc(value)
-      // const {line:startl,ch:startc} = this.codeMirror.posFromIndex(start)
-      // const {line:endl,ch:endc} = this.codeMirror.posFromIndex(end)
-      this.scrollTo(this.codeMirror, start, end + 1, marking)
+      this.markIt(this.codeMirror, ranges);
       return r
     }
 

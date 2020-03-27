@@ -4,9 +4,14 @@ import PubSub from 'pubsub-js';
 import { data_spoon as data } from './data'
 const ONLY_TESTS_DECLS = false;
 class GraphChart extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+    };
+  }
   componentDidMount() {
     // const data = [2, 4, 2, 6, 8]
-    window.reloadGraph = (x,state={}) => {
+    window.reloadGraph = (x, state = {}) => {
       console.log("reloadGraph", x, JSON.stringify(x))
       const data = {
         ...state,
@@ -203,16 +208,16 @@ class GraphChart extends Component {
     function run(graph = _graph) {
       _this.refs.canvas &&
         (_this.refs.canvas.innerHTML = '');
-      
-        const zetgzerfg = {}
-        graph.roots.forEach((x,i)=>zetgzerfg[x]=i)
+
+
+      const zetgzerfg = {}
+      graph.roots.forEach((x, i) => zetgzerfg[x] = i)
 
       const graphLayout = d3.forceSimulation(graph.nodes)
         // .alphaDecay(1 - Math.pow(0.001, 1 / 100))
         // .force('charge', d3.forceManyBody().strength(.5))
-        .force("charge", d3.forceManyBody().distanceMax(1000)
-          // .strength(d => -10000))
-          .strength(d => isTest(d) ? (d.isTest ? -80 : -80) : -5000))
+        .force("charge", d3.forceManyBody().distanceMin(1000)
+          .strength(d => isTest(d) ? (d.isTest ? -40 : -40) : -5000))
         //   .strength(d => d.isRoot ? -100 : -50))
         // .force("test", isolate(
         //   d3.forceManyBody().distanceMax(800)
@@ -252,9 +257,9 @@ class GraphChart extends Component {
           }
           return 300 * d.depth
         }).strength(d => isTest(d) ? .8 : 1.))
-        .force("x", d3.forceX(d=>{
-          return zetgzerfg[d.root]*(width/graph.roots.length)*40
-        }).strength(1))
+        .force("x", d3.forceX(d => {
+          return zetgzerfg[d.root] * 1000 //(width / graph.roots.length) * 40
+        }).strength(d=>d.isRoot ? (1) : .2))
         // // .force("y", d3.forceY(height / 2).strength(1))
         // .force("collision", d3.forceCollide(40)
         //   // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : 10) * NODE_SIZE)
@@ -264,6 +269,39 @@ class GraphChart extends Component {
           .id(function (d) { return d.id; })
           .distance(d => isTest(d) ? 10 : 20).strength(.1));
 
+
+      const adjlist = [];
+
+      graph.links.forEach(function (d) {
+        adjlist[d.source.index + "-" + d.target.index] = true;
+        adjlist[d.target.index + "-" + d.source.index] = true;
+        d.target.causes2.push(d);
+        d.source.effects2.push(d);
+      });
+
+      // const zdazdaz = []
+      // for (let i = 1; i < graph.roots.length; i++) {
+      //   zdazdaz.push({
+      //     source: graph.roots[i - 1] + " " + graph.roots[i - 1],
+      //     target: graph.roots[i] + " " + graph.roots[i]
+      //   })
+      // }
+      // graphLayout
+      //   .force("link-roots", d3.forceLink(zdazdaz)
+      //     .id(function (d) { return d.id; })
+      //     .distance(d => 3 * size(d.target) * size(d.source)).strength(.3));
+
+
+      // function size(d) {
+      //   if (d.effects2.length <= 0) {
+      //     return 1
+      //   }
+      //   let r = 0
+      //   d.effects2.forEach(x => {
+      //     Math.max(r, size(x.target))
+      //   })
+      //   return r
+      // }
       // graph.roots.forEach(element => {
       //   graphLayout.force("g" + element, isolate(
       //     d3.forceManyBody().distanceMax(10000)
@@ -275,25 +313,27 @@ class GraphChart extends Component {
 
       setTimeout(function () {
         graphLayout
-        .force("x",null)
+          // .force("x", null)
         graphLayout.restart();
-      },1000)
+      }, 1000)
       setTimeout(function () {
         graph.roots.forEach(element => {
           graphLayout.force("g" + element, null)
         });
         graphLayout
-        .force("charge", d3.forceManyBody().distanceMax(1000)
-          .strength(d => isTest(d) ? (d.isTest ? -40 : -40) : -5000))
-        .force("link", d3.forceLink(graph.links)
-        .id(function (d) { return d.id; })
-        .distance(d => isTest(d) ? 10 : 20).strength(.8))
-        .force("collision", d3.forceCollide(40)
-          // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : 10) * NODE_SIZE)
-          // .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
-        )
+          .force("charge", d3.forceManyBody().distanceMin(1000)
+            .strength(d => 5000))
+          .force("charge", d3.forceManyBody().distanceMax(1000)
+            .strength(d => -5000))
+          .force("link", d3.forceLink(graph.links)
+            .id(function (d) { return d.id; })
+            .distance(d => isTest(d) ? 10 : 20).strength(.8))
+          .force("collision", d3.forceCollide(40)
+            // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : 10) * NODE_SIZE)
+            // .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
+          )
         graphLayout.restart();
-      },5000)
+      }, 5000)
 
       graphLayout
         .on("tick", ticked)
@@ -307,14 +347,6 @@ class GraphChart extends Component {
         return force;
       }
 
-      const adjlist = [];
-
-      graph.links.forEach(function (d) {
-        adjlist[d.source.index + "-" + d.target.index] = true;
-        adjlist[d.target.index + "-" + d.source.index] = true;
-        d.target.causes2.push(d);
-        d.source.effects2.push(d);
-      });
 
       function neigh(a, b) {
         return a == b || adjlist[a + "-" + b];
@@ -365,12 +397,92 @@ class GraphChart extends Component {
 
       function addContent(/** @type {d3.Selection<SVGGElement, any, SVGGElement, any>} */node) {
         if (true) {
-          node
+          const evo_nodes = node
+            .filter(d => {
+              if (typeof d.evolution !== "object") {
+                return false
+              }
+              return true
+            })
+          evo_nodes
+            .append("text")
+            .style("transform-origin", "center")
+            .style("font-weight", 900)
+            .style("font-size", "120px")
+            .style("font-family", "sans-serif")
+            .attr("fill", d => {
+              return "green"
+            })
+            .text(d => {
+              if (d.evolution.type === "Move Method") {
+                return "MM"
+              }
+              try {
+                return d.evolution.type.split(" ").map(x => x[0]).join("")
+              } catch (error) {
+                return "O"
+              }
+            })
+            .attr("dominant-baseline", "middle")
+            .attr("text-anchor", "middle")
+            .append("svg:title")
+            .text(function (d, i) {
+              return d.evolution.type
+            })
+          const other_nodes = node
+            .filter(d => {
+              if (typeof d.evolution !== "object") {
+                return true
+              }
+              return false
+            })
+          other_nodes
             .append("circle")
             // .attr("x", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
             // .attr("y", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
             .attr("r", function (d) { return d.missing ? 0 : NODE_SIZE / 2; })
-          node
+          evo_nodes
+            .append("text")
+            .style("transform-origin", "center")
+            .attr("dominant-baseline", "middle")
+            .style("font-weight", "bolder")
+            .attr("text-anchor", "middle")
+            .attr("fill", "black")
+            .text(d => {
+              if (typeof d.name === "string") {
+                return d.name
+              }
+              const value = d.value
+              if (typeof value === "string") {
+                return value
+              }
+              if (typeof value.name === "string") {
+                return value.name
+              }
+              if (typeof value.sig === "string") {
+                return value.sig
+              }
+              return value.sig.name
+            })
+            .append("svg:title")
+            .text(function (d, i) {
+              if (typeof d.signature === "string") {
+                return d.declType + '.' + d.signature
+              }
+              const value = d.value
+              if (typeof value === "string") {
+                return value
+              }
+              if (typeof value.signature === "string") {
+                return value.declType + '.' + value.signature
+              }
+              if (typeof value.sig === "string") {
+                return value.sig
+              }
+              return value.sig.declType + '.' + value.sig.signature
+            })
+
+          other_nodes
             .append("text")
             .style("transform-origin", "center")
             .attr("fill", d => {
@@ -531,14 +643,15 @@ class GraphChart extends Component {
       }
 
       function dblclick(d) {
-        PubSub.publish("CHANGE_DIFF_CONTEXT", { node: d})//, root: d.causes.length === 0 ? d : getRoot(d.causes[0]) })
+        _this.props.onSelection(d.value.position.start)
+        PubSub.publish("CHANGE_DIFF_CONTEXT", { node: d })//, root: d.causes.length === 0 ? d : getRoot(d.causes[0]) })
       }
 
       // function getRoot(id) {
       //   const d = graph.byId[id];
       //   return d.causes.length === 0 ? d : getRoot(d.causes[0])
       // }
-      
+
       // let labelNode = container.append("g").attr("class", "labelNodes")
       //     .selectAll("text")
       //     .data(label.nodes)

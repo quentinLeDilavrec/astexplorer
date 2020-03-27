@@ -357,26 +357,37 @@ li.entry {
 
 .CodeMirror .marked,
 .entry.highlighted {
-  border-radius: 2px;
   background-color: hsla(56, 100%, 51%, 0.4);
 }
 
-.CodeMirror .marked-evo-from,
-.entry.highlighted {
-  border-radius: 2px;
+.CodeMirror .marked-evo-from {
   background-color: hsla(7, 100%, 51%, 0.4);
 }
 
-.CodeMirror .marked-evo-to,
-.entry.highlighted {
-  border-radius: 2px;
-  background-color: hsla(111, 100%, 51%, 0.4);
+.CodeMirror .marked.marked-evo-from {
+  background-image: repeating-linear-gradient(-53deg, hsla(56, 100%, 51%, .4) 0px 5px, hsla(7, 100%, 51%, .4) 5px 10px);
+  background-attachment: fixed;
+  background-color: transparent;
 }
 
-.CodeMirror .marked-impacted,
-.entry.highlighted {
-  border-radius: 2px;
-  background-color: hsla(157, 100%, 51%, 0.4);
+.CodeMirror .marked-evo-to {
+  background-color: hsla(101, 100%, 51%, 0.4);
+}
+
+.CodeMirror .marked.marked-evo-to {
+  background-image: repeating-linear-gradient(-53deg, hsla(56, 100%, 51%, 0.4) 0px 5px, hsla(101, 100%, 51%, 0.4) 5px 10px);
+  background-attachment: fixed;
+  background-color: transparent;
+}
+
+.CodeMirror .marked-impacted {
+  background-color: hsla(185, 100%, 51%, 0.4);
+}
+
+.CodeMirror .marked.marked-impacted {
+  background-image: repeating-linear-gradient(-53deg, hsla(56, 100%, 51%, 0.4) 0px 5px, hsla(185, 100%, 51%, 0.4) 5px 10px);
+  background-attachment: fixed;
+  background-color: transparent;
 }
 
 .entry > .value {
