@@ -10,21 +10,7 @@ const webpack = require('webpack');
 const DEV = process.env.NODE_ENV !== 'production';
 const CACHE_BREAKER = Number(fs.readFileSync(path.join(__dirname, 'CACHE_BREAKER')));
 
-const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
-
 const plugins = [
-
-  new MonacoWebpackPlugin({
-    languages: ["typescript", "javascript", "css"],
-  }),
-  // new MonacoWebpackPlugin(
-  // {
-  //   // available options are documented at https://github.com/Microsoft/monaco-editor-webpack-plugin#options
-  //   // languages: ['json', 'javascript', 'java']
-  //   // languages: ['json', 'java']
-  //   // publicPath : '/'
-  // }
-  // ),
   new webpack.DefinePlugin({
     'process.env.API_HOST': JSON.stringify(process.env.API_HOST || ''),
   }),
@@ -189,7 +175,6 @@ module.exports = Object.assign({
           path.join(__dirname, 'node_modules', 'tslint'),
           path.join(__dirname, 'node_modules', 'tslib'),
           path.join(__dirname, 'node_modules', 'svelte'),
-          // path.join(__dirname, 'node_modules', 'monaco-editor/esm/'),
           path.join(__dirname, 'src'),
         ],
         loader: 'babel-loader',
