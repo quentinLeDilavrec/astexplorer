@@ -1,7 +1,6 @@
 import * as LocalStorage from './components/LocalStorage';
 import ASTOutputContainer from './containers/ASTOutputContainer';
 import CodeEditorContainer from './containers/CodeEditorContainer';
-import CodeMMEditorContainer from './containers/CodeMMEditorContainer';
 
 import MultiCodeContainer from './containers/MultiCodeContainer';
 import DiffCodeContainer from './containers/DiffCodeContainer';
