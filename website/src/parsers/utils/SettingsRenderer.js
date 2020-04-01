@@ -42,15 +42,15 @@ function getUpdateStrategy(settings) {
 }
 
 export default function SettingsRenderer(props) {
-  const {settingsConfiguration, parserSettings, onChange} = props;
+  const {settingsConfiguration, settings, onChange} = props;
   const {
     title,
     fields,
     required = new Set(),
-    update=getUpdateStrategy(parserSettings),
+    update=getUpdateStrategy(settings),
   } = settingsConfiguration;
   const values =
-    (settingsConfiguration.values || getValuesFromSettings)(parserSettings);
+    (settingsConfiguration.values || getValuesFromSettings)(settings);
 
   return (
     <div>
@@ -68,7 +68,7 @@ export default function SettingsRenderer(props) {
                     checked={values[setting]}
                     onChange={
                       ({target}) => onChange(
-                        update(parserSettings, setting, target.checked),
+                        update(settings, setting, target.checked),
                       )
                     }
                   />
@@ -85,7 +85,7 @@ export default function SettingsRenderer(props) {
                   <select
                     onChange={
                       ({target}) => onChange(update(
-                        parserSettings,
+                        settings,
                         fieldName,
                         converter(target.value),
                       ))
@@ -106,10 +106,10 @@ export default function SettingsRenderer(props) {
               <SettingsRenderer
                 key={setting.key}
                 settingsConfiguration={setting}
-                parserSettings={setting.settings(parserSettings)}
+                settings={setting.settings(settings)}
                 onChange={
-                  settings => onChange(
-                    {...parserSettings, [setting.key]: settings},
+                  relativeSettings => onChange(
+                    {...settings, [setting.key]: relativeSettings},
                   )
                 }
               />
@@ -123,7 +123,7 @@ export default function SettingsRenderer(props) {
 
 SettingsRenderer.propTypes = {
   settingsConfiguration: PropTypes.object.isRequired,
-  parserSettings: PropTypes.oneOfType([
+  settings: PropTypes.oneOfType([
     PropTypes.object,
     PropTypes.array,
   ]).isRequired,
