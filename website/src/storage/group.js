@@ -1,9 +1,20 @@
 import React from 'react';
 import api from './api';
-import { getParserByID } from '../parsers';
+import {getParserByID} from '../parsers';
+
+/**
+ * Indexing multiple revisions at a same location,
+ * so we can avoid making the same work multiple times
+ * DEFERED work in progress
+ */
+
+const service_name = "gist" // originaly gist
+const service_name_through_website = "group" // originaly gist
+
+const website_host = "http://127.0.0.1:8087" // originaly gist https://astexplorer.net
 
 function getIDAndRevisionFromHash() {
-  let match = global.location.hash.match(/^#\/gist\/([^/]+)(?:\/([^/]+))?/);
+  let match = global.location.hash.match(/^#\/group\/([^/]+)(?:\/([^/]+))?/);// originaly gist instead of agregated like in service_name_through_website
   if (match) {
     return {
       id: match[1],
@@ -13,29 +24,29 @@ function getIDAndRevisionFromHash() {
   return null;
 }
 
-function fetchSnippet(snippetID, revisionID = 'latest') {
+function fetchSnippet(snippetID, revisionID='latest') {
   return api(
-    `/gist/${snippetID}` + (revisionID ? `/${revisionID}` : ''),
+    `/${service_name}/${snippetID}` + (revisionID ? `/${revisionID}` : ''),
     {
       method: 'GET',
     },
   )
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      }
-      switch (response.status) {
-        case 404:
-          throw new Error(`Snippet with ID ${snippetID}/${revisionID} doesn't exist.`);
-        default:
-          throw new Error('Unknown error.');
-      }
-    })
-    .then(response => new Revision(response));
+  .then(response => {
+    if (response.ok) {
+      return response.json();
+    }
+    switch (response.status) {
+      case 404:
+        throw new Error(`Snippet with ID ${snippetID}/${revisionID} doesn't exist.`);
+      default:
+        throw new Error('Unknown error.');
+    }
+  })
+  .then(response => new GroupRevision(response));
 }
 
 export function owns(snippet) {
-  return snippet instanceof Revision;
+  return snippet instanceof GroupRevision;
 }
 
 export function matchesURL() {
@@ -51,11 +62,11 @@ export function fetchFromURL() {
 }
 
 /**
- * Create a new snippet.
+ * Create a new evo snippet.
  */
 export function create(data) {
   return api(
-    '/gist',
+    `/${service_name}`,
     {
       method: 'POST',
       headers: {
@@ -64,17 +75,17 @@ export function create(data) {
       body: JSON.stringify(data),
     },
   )
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      }
-      throw new Error('Unable to create snippet.');
-    })
-    .then(data => new Revision(data));
+  .then(response => {
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Unable to create snippet.');
+  })
+  .then(data => new GroupRevision(data));
 }
 
 /**
- * Update an existing snippet.
+ * Update an existing evo snippet.
  */
 export function update(revision, data) {
   // Fetch latest version of snippet
@@ -86,7 +97,7 @@ export function update(revision, data) {
         data.transform = null;
       }
       return api(
-        `/gist/${revision.getSnippetID()}`,
+        `/${service_name}/${revision.getSnippetID()}`,
         {
           method: 'PATCH',
           headers: {
@@ -95,22 +106,22 @@ export function update(revision, data) {
           body: JSON.stringify(data),
         },
       )
-        .then(response => {
-          if (response.ok) {
-            return response.json();
-          }
-          throw new Error('Unable to update snippet.');
-        })
-        .then(data => new Revision(data));
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Unable to update evo snippet.');
+      })
+      .then(data => new GroupRevision(data));
     });
 }
 
 /**
- * Fork existing snippet.
+ * Fork existing evo snippet.
  */
 export function fork(revision, data) {
   return api(
-    `/gist/${revision.getSnippetID()}/${revision.getRevisionID()}`,
+    `/${service_name}/${revision.getSnippetID()}/${revision.getRevisionID()}`,
     {
       method: 'POST',
       headers: {
@@ -119,16 +130,16 @@ export function fork(revision, data) {
       body: JSON.stringify(data),
     },
   )
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      }
-      throw new Error('Unable to fork snippet.');
-    })
-    .then(data => new Revision(data));
+  .then(response => {
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Unable to fork evo snippet.');
+  })
+  .then(data => new GroupRevision(data));
 }
 
-class Revision {
+class GroupRevision {
   constructor(gist) {
     this._gist = gist;
     this._config = JSON.parse(gist.files['astexplorer.json'].content);
@@ -139,7 +150,7 @@ class Revision {
   }
 
   getPath() {
-    return `/gist/${this.getSnippetID()}/${this.getRevisionID()}`;
+    return `/${service_name}/${this.getSnippetID()}/${this.getRevisionID()}`;
   }
 
   getSnippetID() {
@@ -162,20 +173,11 @@ class Revision {
     return this._config.parserID;
   }
 
-  getEvoMinerID() {
-    return this._config.evoMinerID;
-  }
-
   getCode() {
-    if (this._config.instance) {
-      // TODO working with repo instances
-      return null;
-    } else {
-      if (this._code == null) {
-        this._code = getSource(this._config, this._gist) || '';
-      }
-      return this._code;
+    if (this._code == null) {
+      this._code = getSource(this._config, this._gist) || '';
     }
+    return this._code;
   }
 
   getParserSettings() {
@@ -193,7 +195,7 @@ class Revision {
             <input
               readOnly={true}
               onFocus={e => e.target.select()}
-              value={`https://astexplorer.net/#/gist/${snippetID}/${revisionID}`}
+              value={`${website_host}/#/${service_name_through_website}/${snippetID}/${revisionID}`}
             />
           </dd>
           <dt>Latest Revision</dt>
@@ -201,7 +203,7 @@ class Revision {
             <input
               readOnly={true}
               onFocus={e => e.target.select()}
-              value={`https://astexplorer.net/#/gist/${snippetID}/latest`}
+              value={`${website_host}/#/${service_name_through_website}/${snippetID}/latest`}
             />
           </dd>
           <dt>Gist</dt>

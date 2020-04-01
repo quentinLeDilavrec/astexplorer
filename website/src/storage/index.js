@@ -34,22 +34,25 @@ export default class StorageHandler {
 
   /**
    * Create a new snippet.
+   * @param {*} data 
    */
   create(data) {
-    return this._first().create(data);
+    for (const backend of this._backends) {
+        return backend.create(data);
+    }
   }
 
   /**
    * Update an existing snippet.
    */
   update(revision, data) {
-    return this._first().update(revision, data);
+    this._owns(revision).update(revision, data);
   }
 
   /**
    * Fork existing snippet.
    */
   fork(revision, data) {
-    return this._first().fork(revision, data);
+    this._owns(revision).fork(revision, data);
   }
 }

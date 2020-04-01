@@ -2,8 +2,20 @@ import React from 'react';
 import api from './api';
 import { getParserByID } from '../parsers';
 
+/**
+ * Use the gist system to store Evolutions Revisions instead of Revisions like ./gist.js
+ * For now it will only handle repositories and not evos cases from scratch (better to stick closer to ./gist.js),
+ * in the same way being able to browse git repos with the standard mode would be fun.
+ */
+
+
+const service_name = "gist" // originaly gist
+const service_name_through_website = "evolve" // originaly gist
+
+const website_host = "http://127.0.0.1:8087" // originaly gist https://astexplorer.net
+
 function getIDAndRevisionFromHash() {
-  let match = global.location.hash.match(/^#\/gist\/([^/]+)(?:\/([^/]+))?/);
+  let match = global.location.hash.match(/^#\/evolve\/([^/]+)(?:\/([^/]+))?/);// originaly gist instead of evo like in service_name_through_website
   if (match) {
     return {
       id: match[1],
@@ -15,7 +27,7 @@ function getIDAndRevisionFromHash() {
 
 function fetchSnippet(snippetID, revisionID = 'latest') {
   return api(
-    `/gist/${snippetID}` + (revisionID ? `/${revisionID}` : ''),
+    `/${service_name}/${snippetID}` + (revisionID ? `/${revisionID}` : ''),
     {
       method: 'GET',
     },
@@ -31,11 +43,11 @@ function fetchSnippet(snippetID, revisionID = 'latest') {
           throw new Error('Unknown error.');
       }
     })
-    .then(response => new Revision(response));
+    .then(response => new EvoRevision(response));
 }
 
 export function owns(snippet) {
-  return snippet instanceof Revision;
+  return snippet instanceof EvoRevision;
 }
 
 export function matchesURL() {
@@ -51,11 +63,11 @@ export function fetchFromURL() {
 }
 
 /**
- * Create a new snippet.
+ * Create a new evo snippet.
  */
 export function create(data) {
   return api(
-    '/gist',
+    `/${service_name}`,
     {
       method: 'POST',
       headers: {
@@ -70,11 +82,11 @@ export function create(data) {
       }
       throw new Error('Unable to create snippet.');
     })
-    .then(data => new Revision(data));
+    .then(data => new EvoRevision(data));
 }
 
 /**
- * Update an existing snippet.
+ * Update an existing evo snippet.
  */
 export function update(revision, data) {
   // Fetch latest version of snippet
@@ -86,7 +98,7 @@ export function update(revision, data) {
         data.transform = null;
       }
       return api(
-        `/gist/${revision.getSnippetID()}`,
+        `/${service_name}/${revision.getSnippetID()}`,
         {
           method: 'PATCH',
           headers: {
@@ -99,18 +111,18 @@ export function update(revision, data) {
           if (response.ok) {
             return response.json();
           }
-          throw new Error('Unable to update snippet.');
+          throw new Error('Unable to update evo snippet.');
         })
-        .then(data => new Revision(data));
+        .then(data => new EvoRevision(data));
     });
 }
 
 /**
- * Fork existing snippet.
+ * Fork existing evo snippet.
  */
 export function fork(revision, data) {
   return api(
-    `/gist/${revision.getSnippetID()}/${revision.getRevisionID()}`,
+    `/${service_name}/${revision.getSnippetID()}/${revision.getRevisionID()}`,
     {
       method: 'POST',
       headers: {
@@ -123,15 +135,16 @@ export function fork(revision, data) {
       if (response.ok) {
         return response.json();
       }
-      throw new Error('Unable to fork snippet.');
+      throw new Error('Unable to fork evo snippet.');
     })
-    .then(data => new Revision(data));
+    .then(data => new EvoRevision(data));
 }
 
-class Revision {
+const CONFIG_FILE_NAME = 'config.json';
+class EvoRevision {
   constructor(gist) {
     this._gist = gist;
-    this._config = JSON.parse(gist.files['astexplorer.json'].content);
+    this._config = JSON.parse(gist.files[CONFIG_FILE_NAME].content);
   }
 
   canSave() {
@@ -139,12 +152,13 @@ class Revision {
   }
 
   getPath() {
-    return `/gist/${this.getSnippetID()}/${this.getRevisionID()}`;
+    return `/${service_name_through_website}/${this.getSnippetID()}/${this.getRevisionID()}`;
   }
 
   getSnippetID() {
     return this._gist.id;
   }
+
   getRevisionID() {
     return this._gist.history[0].version;
   }
@@ -162,24 +176,27 @@ class Revision {
     return this._config.parserID;
   }
 
-  getEvoMinerID() {
+  getDifferID() {
     return this._config.evoMinerID;
   }
 
   getCode() {
-    if (this._config.instance) {
-      // TODO working with repo instances
-      return null;
-    } else {
-      if (this._code == null) {
-        this._code = getSource(this._config, this._gist) || '';
-      }
-      return this._code;
+    if (this._code == null) {
+      this._code = getSource(this._config, this._gist) || '';
     }
+    return this._code;
   }
 
   getParserSettings() {
     return this._config.settings[this._config.parserID];
+  }
+
+  getDifferSettings() {
+    return this._config.settings[this._config.evoMinerID];
+  }
+
+  getInstance() {
+    return this._config.instance;
   }
 
   getShareInfo() {
@@ -193,7 +210,7 @@ class Revision {
             <input
               readOnly={true}
               onFocus={e => e.target.select()}
-              value={`https://astexplorer.net/#/gist/${snippetID}/${revisionID}`}
+              value={`${website_host}/#/${service_name_through_website}/${snippetID}/${revisionID}`}
             />
           </dd>
           <dt>Latest Revision</dt>
@@ -201,7 +218,7 @@ class Revision {
             <input
               readOnly={true}
               onFocus={e => e.target.select()}
-              value={`https://astexplorer.net/#/gist/${snippetID}/latest`}
+              value={`${website_host}/#/${service_name_through_website}/${snippetID}/latest`}
             />
           </dd>
           <dt>Gist</dt>
