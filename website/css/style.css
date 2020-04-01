@@ -2,14 +2,34 @@
 @import "~codemirror/addon/merge/merge.css";
 @import "~codemirror/addon/fold/foldgutter.css";
 @import "./highlight.css";
-@import "~font-awesome/css/font-awesome.css";
+/* @import "~font-awesome/css/font-awesome.css"; */
+@import "../node_modules/font-awesome/css/font-awesome.css";
 @import "../fontcustom/fontcustom.css";
 
-.CodeMirror-merge, .CodeMirror-merge .CodeMirror {
+
+.evo-button {
+  margin: 0;
+  padding: 1px;
+  border: 0.1em solid hsl(0, 0%, 31%);
+  border-radius: 0.2em;
+  background-color: hsl(0, 0%, 70%);
+  outline: none;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.evo-button:hover,
+.evo-button.clicked {
+  opacity: 1;
+}
+
+.CodeMirror-merge, .CodeMirror-merge > .CodeMirror {
   height: 100%;
 }
 
-.CodeMirror-merge-2pane .CodeMirror-merge-pane {
+.CodeMirror-merge-pane,
+.CodeMirror-merge-2pane > .CodeMirror-merge-pane > div,
+.CodeMirror-merge-2pane > .CodeMirror-merge-pane > div > .CodeMirror {
   height: 100%;
 }
 
@@ -340,7 +360,8 @@ html {
   background-color: #efefef;
 }
 
-.editor {
+.editor,
+.editor > div:not(.CodeMirror) {
   position: absolute;
   left: 0;
   right: 0;
@@ -358,6 +379,14 @@ li.entry {
 .CodeMirror .marked,
 .entry.highlighted {
   background-color: hsla(56, 100%, 51%, 0.4);
+}
+
+.CodeMirror .marked-good {
+  border: 0.1em solid green;
+}
+
+.CodeMirror .marked-bad {
+  border: 0.1em solid red;
 }
 
 .CodeMirror .marked-evo-from {
