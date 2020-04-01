@@ -6,6 +6,7 @@ import 'codemirror/keymap/sublime';
 import PropTypes from 'prop-types';
 import PubSub from 'pubsub-js';
 import React from 'react';
+import ReactDOM from "react-dom";
 
 const defaultPrettierOptions = {
   printWidth: 80,
@@ -20,29 +21,30 @@ const defaultPrettierOptions = {
 export default class Editor2 extends React.Component {
 
   constructor(props) {
+    debugger
     super(props);
     this.state = {
       value: props.value,
     };
   }
 
-  UNSAFE_componentWillReceiveProps(nextProps) {
-    if (nextProps.value !== this.state.value) {
-      this.setState(
-        { value: nextProps.value },
-        () => this.codeMirror.setValue(nextProps.value),
-      );
-    }
-    if (nextProps.mode !== this.props.mode) {
-      this.codeMirror.setOption('mode', nextProps.mode);
-    }
+  // UNSAFE_componentWillReceiveProps(nextProps) {
+  //   if (nextProps.value !== this.state.value) {
+  //     this.setState(
+  //       { value: nextProps.value },
+  //       () => this.codeMirror.setValue(nextProps.value),
+  //     );
+  //   }
+  //   if (nextProps.mode !== this.props.mode) {
+  //     this.codeMirror.setOption('mode', nextProps.mode);
+  //   }
 
-    if (nextProps.keyMap !== this.props.keyMap) {
-      this.codeMirror.setOption('keyMap', nextProps.keyMap);
-    }
+  //   if (nextProps.keyMap !== this.props.keyMap) {
+  //     this.codeMirror.setOption('keyMap', nextProps.keyMap);
+  //   }
 
-    this._setError(nextProps.error);
-  }
+  //   this._setError(nextProps.error);
+  // }
 
 
   shouldComponentUpdate() {
@@ -122,6 +124,7 @@ export default class Editor2 extends React.Component {
       PubSub.subscribe('PANEL_RESIZE', () => {
         if (this.codeMirror) {
           this.codeMirror.refresh();
+          this.codeMirror.setSize();
         }
       }),
     );
@@ -220,12 +223,34 @@ export default class Editor2 extends React.Component {
   }
 
 
+
+
+
   setMirrorValue(param) {
     const { doc: value, ranges } = param
     if (this.codeMirror && (this.state.value = value)) {// TODO should not set state manually
       const r = this.codeMirror.swapDoc(value)
       this.markIt(this.codeMirror, ranges);
       return r
+    }
+
+    if (false) { // TODO 
+      const e = document.createElement('span')
+      // e.style.position="fixed"
+      // e.style.display="block"
+      // e.style.zIndex=101
+      ReactDOM.render((<div>
+        <button className="fa fa-angle-right"></button>
+      </div>
+      ), e)
+      // this.markIt(cm, s)
+      debugger
+      this.codeMirror
+        .addPanel(e, {
+          position: "top",
+          stable: true,
+        })
+      this.codeMirror.refresh();
     }
 
     // if (this.codeMirror) {

@@ -1,4 +1,5 @@
 import CodeMirror from 'codemirror';
+import 'codemirror/addon/display/panel';
 import 'codemirror/addon/merge/merge';
 import 'codemirror/keymap/vim';
 import 'codemirror/keymap/emacs';
@@ -6,6 +7,9 @@ import 'codemirror/keymap/sublime';
 import PropTypes from 'prop-types';
 import PubSub from 'pubsub-js';
 import React from 'react';
+import ReactDOM from "react-dom";
+import cx from 'classnames';
+import { cps } from 'redux-saga/effects';
 
 const defaultPrettierOptions = {
   printWidth: 80,
@@ -16,38 +20,13 @@ const defaultPrettierOptions = {
   jsxBracketSameLine: false,
   parser: 'babylon',
 };
-
-// import { MonacoDiffEditor } from 'react-monaco-editor';
-
-// export default class DiffEditor extends React.Component {
-
-//   constructor(props) {
-//     super(props);
-//     this.state = {
-//       value: props.value,
-//     };
-//   }
-
-//   render() {
-//     const code1 = "// your original code...";
-//     const code2 = "// a different version...\nlet a = 2;";
-//     const options = {
-//       //renderSideBySide: false
-//     };
-//     return (
-//       <MonacoDiffEditor
-//         // width="100%"
-//         // height="100%"
-//         // language="javascript"
-//         // theme="vs-dark"
-//         original={code1}
-//         value={code2}
-//         options={options}
-//       />
-//     );
-//   }
-// }
-
+function onResize(cm) {
+  var d = cm.display;
+  // Might be a text scaling operation, clear size caches.
+  d.cachedCharWidth = d.cachedTextHeight = d.cachedPaddingH = null;
+  d.scrollbarsClipped = false;
+  cm.setSize();
+}
 export default class DiffEditor extends React.Component {
 
   constructor(props) {
@@ -58,8 +37,12 @@ export default class DiffEditor extends React.Component {
       mode: props.mode,
     };
   }
+  // componentDidCatch() { }
+  // static getDerivedStateFromProps() {
 
-  // UNSAFE_componentWillReceiveProps(nextProps) {
+  // }
+
+  //UNSAFE_componentWillReceiveProps(nextProps) {
   //   if (nextProps.value !== this.state.value ||
   //     nextProps.oldvalue !== this.state.oldvalue) {
   //     this.setState(
@@ -114,23 +97,125 @@ export default class DiffEditor extends React.Component {
    * @param {CodeMirror.Editor} editor 
    * @param {{start:number,end:number}[]} ranges 
    */
-  markIt(editor, ranges) {
+  markIt(editor, ranges, defaultMarking, more) {
     let first = Infinity;
+    /** @type {CodeMirror.TextMarker[]} */
+    const elements = []
     for (let i = 0; i < ranges.length; i++) {
       const start = ranges[i].start;
       const end = ranges[i].end;
       first = Math.min(first, start)
       const from = editor.posFromIndex(start)
       const to = editor.posFromIndex(end + 1)
-      editor.markText(
+      const m = editor.markText(
         from, to,
         {
-          className: ranges[i].marking,
+          className: ranges[i].marking || defaultMarking,
+          title:
+            // ranges[i].description || 
+            'TODO get node description'
           // shared:true // useful ?
         },
       )
+      // m.on // TODO test also this
+      elements.push(m)
     }
+    const thumbs = {
+      good: 'thumbs-up',
+      bad: 'thumbs-down',
+    }
+    const marked = {
+      good: 'marked-good',
+      bad: 'marked-bad',
+    }
+    /** @type {{[b:string]:HTMLButtonElement}} */
+    const buttons = {}
+    let clicked_state
+    const onLeave = () => {
+      elements.forEach((x, i) => {
+        const { from, to } = x.find()
+        const classNames = {}
+        x.className.split(" ").forEach(x => classNames[x] = true)
+        Object.entries(marked).forEach(([k, v]) => classNames[v] = (k === clicked_state))
+        x.clear()
+        elements[i] = editor.markText(
+          from, to,
+          {
+            className: cx(classNames),
+          },
+        )
+      })
+    }
+    const onEnter = choice => () => {
+      elements.forEach((x, i) => {
+        const { from, to } = x.find()
+        const classNames = {}
+        x.className.split(" ").forEach(x => classNames[x] = true)
+        Object.entries(marked).forEach(([k, v]) => classNames[v] = (clicked_state !== choice && k === choice))
+        x.clear()
+        elements[i] = editor.markText(
+          from, to,
+          {
+            className: cx(classNames),
+            // handleMouseEvents: true, // NEXT checkit
+          },
+        )
+      })
+    }
+    const onClick = choice => () => {
+      for (const key in buttons) {
+        if (buttons.hasOwnProperty(key)) {
+          const element = buttons[key];
+          if (key === choice && clicked_state !== choice) {
+            element.classList.add('clicked')
+          } else {
+            element.classList.remove('clicked')
+          }
+        }
+      }
+      // TODO MultiEditor should forward some data OR a callback to handle this
+      console.log(thumbs[choice],
+        {
+          ranges: elements.map((x, i) => {
+            const { from, to } = x.find()
+            const classNames = {}
+            x.className.split(" ").forEach(x => classNames[x] = true)
+            Object.entries(marked).forEach(([k, v]) => classNames[v] = (clicked_state !== choice && k === choice))
+            debugger
+            x.clear()
+            elements[i] = editor.markText(
+              from, to,
+              {
+                className: cx(classNames),
+              },
+            )
+            return {
+              start: editor.indexFromPos(from),
+              end: editor.indexFromPos(to)
+            }
+          })
+        })
+      clicked_state = clicked_state === choice ? undefined : choice
+    }
+    const e = document.createElement('div')
+    ReactDOM.render((<div>
+      <button className="fa fa-thumbs-down evo-button" style={{ color: "red" }}
+        onClick={onClick('bad')} onMouseEnter={onEnter('bad')} onMouseLeave={onLeave}
+        ref={x => (buttons.bad = x)}></button>
+      <button className="fa fa-thumbs-up evo-button" style={{ color: "green" }}
+        onClick={onClick('good')} onMouseEnter={onEnter('good')} onMouseLeave={onLeave}
+        ref={x => (buttons.good = x)}></button>
+    </div>), e)
+    // e.style.backgroundColor = "purple"
+    e.style.zIndex = 100
+    const tmp = editor.posFromIndex(first)
+    // editor.addWidget(editor.posFromIndex(first),
+    //   e, true)
+    editor.addLineWidget(tmp.line, e, { above: true, showIfHidden: true, noHScroll: true, })
     this.scrollTo(editor, editor.posFromIndex(first));
+    if (more === 'good') {
+      onClick('good')()
+    }
   }
 
   setMirrorsValue({ before, after }) {
@@ -185,6 +270,7 @@ export default class DiffEditor extends React.Component {
 
     this._CMHandlers = [];
     this._subscriptions = [];
+    // TODO unit test of MergeView outside of component
     this.codeMirror = CodeMirror.MergeView( // eslint-disable-line new-cap
       this.container,
       {
@@ -201,6 +287,95 @@ export default class DiffEditor extends React.Component {
         allowEditingOriginals: true,
       },
     );
+    const onClick = () => {
+      /** @type {{start:number, end:number}[]} */
+      const l = []
+      for (const x of this.codeMirror.editor().listSelections()) {
+        const h = this.codeMirror.editor().indexFromPos(x.head)
+        const a = this.codeMirror.editor().indexFromPos(x.anchor)
+        l.push(a < h ? { start: a, end: h } : { start: h, end: a })
+      }
+      // l.sort(({start:a},{start:b})=>a-b)
+      // /** @type {{start:number, end:number}[]} */
+      // const r = []
+      // const c = l[0]
+      // for (const x of l) {
+      //   // DEFERED finish if ranges need to be joined
+      // }
+      debugger
+      this.markIt(this.codeMirror.editor(), l, '', 'good')
+    }
+    let panel
+    const f = () => {
+      const e = document.createElement('span')
+      // e.style.position="fixed"
+      // e.style.display="block"
+      // e.style.zIndex=101
+      ReactDOM.render((<div>
+        <button className="fa evo-button" onClick={onClick}
+          title="Set selection as co-evolution">Co-evolution</button>
+      </div>), e)
+      // this.markIt(cm, s)
+      panel = this.codeMirror.editor()
+        .addPanel(e, {
+          stable: true,
+          position: "bottom",
+          replace: panel
+          // stable: true,
+        })
+    }
+    const g = () => {
+      if (panel) {
+        panel.clear()
+        panel = undefined
+      }
+    }
+    // .setSize(undefined,"42px")
+    // this.codeMirror.editor().refresh();
+    // this.codeMirror.editor().setSize();
+    // onResize(this.codeMirror.editor())
+    // this.codeMirror.editor().setSize(undefined, "82%")
+    // this.codeMirror.editor().wrapper().style.height="83%"
+    // this.codeMirror.editor().getWrapperElement().style.height="83%"
+    if (false) {
+      const e2 = document.createElement('span')
+      // e2.style.position="fixed"
+      // e2.style.display="block"
+      // e2.style.zIndex=101
+      ReactDOM.render((<div>
+        <button className="fa fa-angle-right"></button>
+      </div>), e2)
+      this.codeMirror.leftOriginal()
+        .addPanel(e2, {
+          position: "top",
+          stable: true,
+        })
+    }
+    // this.codeMirror.leftOriginal().refresh();
+    // this.codeMirror.leftOriginal().setSize(undefined, "84%")
+    // this.codeMirror.leftOriginal().getWrapperElement().style.height="85%"
+    let selecting = false
+    this.codeMirror.editor().on('cursorActivity', (cm) => {
+      const tmp = cm.getSelection()
+      if (tmp.length === 0) {
+        selecting = false
+        g()
+      }
+    })
+    this.codeMirror.editor()
+      .on('beforeSelectionChange', (cm, s) => {
+        if (!selecting) {
+          setTimeout(() => {
+            if (!panel && cm.getSelection().length !== 0) {
+              const { left, top } = cm.getScrollInfo()
+              f()
+              cm.scrollTo(left, top)
+            }
+            selecting = false
+          }, 2000)
+        }
+        selecting = true
+      })
 
     this._bindCMHandler('blur', instance => {
       if (!this.props.enableFormatting) return;
@@ -237,8 +412,10 @@ export default class DiffEditor extends React.Component {
     this._subscriptions.push(
       PubSub.subscribe('PANEL_RESIZE', () => {
         if (this.codeMirror) {
-          this.codeMirror.edit.refresh();
-          this.codeMirror.edit.state.diffViews[0].orig.refresh();
+          this.codeMirror.editor().refresh();
+          this.codeMirror.editor().setSize();
+          this.codeMirror.leftOriginal().refresh();
+          this.codeMirror.leftOriginal().setSize();
 
           // this.codeMirror.left.forceUpdate()(this.state.mode)
           // this.codeMirror.right.forceUpdate()(this.state.mode)
