@@ -28,6 +28,7 @@ import { enableBatching } from 'redux-batched-actions';
 import { loadSnippet } from './store/actions';
 import { render } from 'react-dom';
 import * as gist from './storage/gist';
+import * as evo from './storage/evo';
 import * as parse from './storage/parse';
 import StorageHandler from './storage';
 import '../css/style.css';
@@ -36,14 +37,15 @@ import differMiddleware from './store/differMiddleware';
 
 import 'diff-match-patch'
 import GraphChart from './containers/GraphOutputContainer';
+import { loadInstance } from './store/actions';
+import queryString from 'query-string';
+import CoEvolutionService from './coevolutionService';
 
 function resize() {
   PubSub.publish('PANEL_RESIZE');
 }
 
 function App(props) {
-  // console.log(98, props);
-  // debugger
   /** @type {JSX.Element} */
   let content;
   if (props.showTransformer) {
@@ -115,8 +117,6 @@ App.propTypes = {
 
 const AppContainer = connect(
   state => {
-    window.qwerty = state
-    // debugger
     return ({
       showTransformer: state.showTransformPanel,
       showDiffer: state.showDiffPanel,
@@ -131,41 +131,19 @@ const store = createStore(
   enableBatching(astexplorer),
   revive(LocalStorage.readState()),
   composeEnhancers(
-    applyMiddleware(sagaMiddleware, parserMiddleware),
+    applyMiddleware(sagaMiddleware, parserMiddleware, differMiddleware),
   ),
 );
 store.subscribe(debounce(() => {
-  // debugger
   const state = store.getState();
   // We are not persisting the state while looking at an existing revision
   if (!getRevision(state)) {
     LocalStorage.writeState(persist(state));
   }
 }));
-sagaMiddleware.run(saga, new StorageHandler([gist, parse]));
-
-
-window.currentTarget = window.currentTarget || {
-  // repo: "https://github.com/Graylog2/graylog2-server.git",
-  // commitIdBefore: "904f8e2a49f8ded1b16ab52e37588592e02da71c",
-  // commitIdAfter: "767171c90110c4c5781e8f6d19ece1fba0d492e9"
-  repo: "https://github.com/INRIA/spoon.git",
-  commitIdBefore: "4b42324566bdd0da145a647d136a2f555c533978",
-  commitIdAfter: "904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b"
-};
-{
-  const r = window.prompt("target", window.currentTarget.repo + ';' + window.currentTarget.commitIdBefore + ';' + window.currentTarget.commitIdAfter)
-  if (r){
-    const [repo, before, after] = r.split(/;/);
-
-    window.currentTarget = {
-      repo: repo,
-      commitIdBefore: before,
-      commitIdAfter: after
-    };
-  }
+sagaMiddleware.run(saga, new StorageHandler([evo, gist, parse]), new CoEvolutionService([]));
   /*
-  on open JDK 8
+  on open JDK 11
 https://github.com/INRIA/spoon.git;4b42324566bdd0da145a647d136a2f555c533978;904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b
 https://github.com/INRIA/spoon.git;8fd216c220de592eb5b9cb306404c54673b71d37;904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b
 https://github.com/google/truth.git;fb7f2fe21d8ca690daabedbd31a0ade99244f99c;1768840bf1e69892fd2a23776817f620edfed536
@@ -204,7 +182,6 @@ https://github.com/plutext/docx4j.git;4b4b0babb11891427a8123771350d46417bb5dd4;e
 https://github.com/undertow-io/undertow.git;a55874e2d4c370e02ad3eb189a5210839f6dab20;d5b2bb8cd1393f1c5a5bb623e3d8906cd57e53c4
 same as graphhopper
 */
-}
 
 store.dispatch({ type: 'INIT' });
 
@@ -216,12 +193,19 @@ render(
 );
 
 global.onhashchange = () => {
-  // debugger
-  store.dispatch(loadSnippet());
+  if (location.hash.length > 1) {
+    store.dispatch(loadSnippet());
+  } else if (location.search.length > 1) {
+    const parsed = queryString.parse(location.search);
+    store.dispatch(loadInstance(parsed));
+  }
 };
 
 if (location.hash.length > 1) {
   store.dispatch(loadSnippet());
+} else if (location.search.length > 1) {
+  const parsed = queryString.parse(location.search);
+  store.dispatch(loadInstance(parsed));
 }
 
 global.onbeforeunload = () => {
