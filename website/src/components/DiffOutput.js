@@ -15,13 +15,21 @@ function formatTime(time) {
   return `${(time / 1000).toFixed(2)}s`;
 }
 
+function betterLoadingDisplay(time, status) {
+  if (time !== null) {
+    return time;
+  }
+  // TODO update title depending on advencement, use pubSub? or update react component
+  return <i className="fa fa-lg fa-spinner fa-pulse" title={status}></i>;
+}
+
 export default function DiffOutput({
   position = null, differ = {},
-  oldCode = '', diffAST = {}, code = '' }) {
+  status='?',
+  diffAST = {} }) {
   const [selectedOutput, setSelectedOutput] = useState(0);
   const { ast = null } = diffAST;
   let output;
-
   if (diffAST.error) {
     output =
       <div style={{ padding: 20 }}>
@@ -33,7 +41,7 @@ export default function DiffOutput({
         {
           React.createElement(
             visualizations[selectedOutput],
-            { parseResult:diffAST, position },
+            { parseResult: diffAST, position },
           )
         }
       </ErrorBoundary>
@@ -58,7 +66,7 @@ export default function DiffOutput({
       <div className="toolbar">
         {buttons}
         <span className="time">
-          {formatTime(diffAST.time)}
+          {betterLoadingDisplay(formatTime(diffAST.time), status)}
         </span>
       </div>
       {output}
@@ -67,11 +75,10 @@ export default function DiffOutput({
 }
 
 DiffOutput.propTypes = {
-  position: PropTypes.number,
+  position: PropTypes.oneOfType([PropTypes.number,PropTypes.object]),
   differ: PropTypes.object,
-  oldCode: PropTypes.string,
+  status: PropTypes.string,
   diffAST: PropTypes.object,
-  code: PropTypes.string,
 };
 
 class ErrorBoundary extends React.Component {

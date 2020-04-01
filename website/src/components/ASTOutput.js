@@ -3,11 +3,11 @@ import React from 'react';
 import cx from 'classnames';
 import visualizations from './visualization';
 
-const {useState} = React;
+const { useState } = React;
 
 function formatTime(time) {
   if (!time) {
-    return null;
+    return <i className="fa fa-lg fa-spinner fa-pulse"></i>;
   }
   if (time < 1000) {
     return `${time}ms`;
@@ -15,14 +15,14 @@ function formatTime(time) {
   return `${(time / 1000).toFixed(2)}s`;
 }
 
-export default function ASTOutput({parseResult={}, position=null}) {
+export default function ASTOutput({ parseResult = {}, position = null }) {
   const [selectedOutput, setSelectedOutput] = useState(0);
-  const {ast=null} = parseResult;
+  const { ast = null } = parseResult;
   let output;
 
   if (parseResult.error) {
     output =
-      <div style={{padding: 20}}>
+      <div style={{ padding: 20 }}>
         {parseResult.error.message}
       </div>;
   } else if (ast) {
@@ -31,7 +31,7 @@ export default function ASTOutput({parseResult={}, position=null}) {
         {
           React.createElement(
             visualizations[selectedOutput],
-            {parseResult, position},
+            { parseResult, position },
           )
         }
       </ErrorBoundary>
@@ -59,7 +59,7 @@ export default function ASTOutput({parseResult={}, position=null}) {
           {formatTime(parseResult.time)}
         </span>
       </div>
-    {output}
+      {output}
     </div>
   );
 }
@@ -84,12 +84,12 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       // You can render any custom fallback UI
       return (
-        <div style={{padding: 20}}>
-					An error was caught while rendering the AST. This usually is an issue with
+        <div style={{ padding: 20 }}>
+          An error was caught while rendering the AST. This usually is an issue with
           astexplorer itself. Have a look at the console for more information.
           Consider <a href="https://github.com/fkling/astexplorer/issues/new?template=bug_report.md">filing a bug report</a>, but <a href="https://github.com/fkling/astexplorer/issues/">check first</a> if one doesn&quot;t already exist. Thank you!
 				</div>
-			);
+      );
     }
     return this.props.children;
   }
