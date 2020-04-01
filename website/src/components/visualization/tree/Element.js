@@ -169,7 +169,6 @@ const Element = React.memo(function Element({
   // enable highlight on hover if node has a range
   if (range && level !== 0) {
     if (diff) {
-      debugger
       onMouseOver = event => {
         event.stopPropagation();
         PubSub.publish('HIGHLIGHT_DIFF', { node: value, range });

@@ -99,5 +99,5 @@ export default function Tree({parseResult, position}) {
 
 Tree.propTypes = {
   parseResult: PropTypes.object,
-  position: PropTypes.number,
+  position: PropTypes.oneOfType([PropTypes.number,PropTypes.object]),
 };
