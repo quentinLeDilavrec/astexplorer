@@ -1,12 +1,45 @@
 // import pkg from 'json-to-ast/package.json';
-import defaultParserInterface from '../../../utils/defaultParserInterface';
+import defaultDifferInterface from '../../../utils/defaultDifferInterface';
 const ID = 'gumtree';
 const VERSION = '0.0.0';
 const HOMEPAGE = 'https://github.com/SpoonLabs/gumtree';
 const PARSER_SERVICE_URL = 'http://131.254.17.96:8095/diff/gumtree';
 
+function apply2AST(side) {
+  return function a2a(n) {
+    n.side = side;
+    for (const child of n.children) {
+      a2a(child);
+    }
+  }
+}
+
+function addSide(op) {
+  if (typeof op.from === "object") {
+    op.from.side = 'left';
+    op.from.valueAST && apply2AST('left')(op.from.valueAST);
+  }
+  if (typeof op.to === "object") {
+    op.to.side = "right";
+    op.to.valueAST && apply2AST('right')(op.to.valueAST);
+  }
+  if (typeof op.into === "object") {
+    op.into.side = "right";
+    op.into.valueAST && apply2AST('right')(op.into.valueAST);
+  }
+  if (typeof op.at === "object") {
+    if (op.type === "Delete") {
+      op.at.side = "left";
+      op.at.valueAST && apply2AST('left')(op.at.valueAST);
+    } else if (op.type === "Insert") {
+      op.at.side = "right";
+      op.at.valueAST && apply2AST('right')(op.at.valueAST);
+    }
+  }
+}
+
 export default {
-  ...defaultParserInterface,
+  ...defaultDifferInterface,
   id: ID,
   displayName: ID,
   version: VERSION,
@@ -20,39 +53,6 @@ export default {
   // },
 
   loadDiffer(callback) {
-
-    function apply2AST(side) {
-      return function a2a(n) {
-        n.side = side;
-        for (const child of n.children) {
-          a2a(child);
-        }
-      }
-    }
-
-    function addSide(op) {
-      if (typeof op.from === "object") {
-        op.from.side = 'left';
-        op.from.valueAST && apply2AST('left')(op.from.valueAST);
-      }
-      if (typeof op.to === "object") {
-        op.to.side = "right";
-        op.to.valueAST && apply2AST('right')(op.to.valueAST);
-      }
-      if (typeof op.into === "object") {
-        op.into.side = "right";
-        op.into.valueAST && apply2AST('right')(op.into.valueAST);
-      }
-      if (typeof op.at === "object") {
-        if (op.type === "Delete") {
-          op.at.side = "left";
-          op.at.valueAST && apply2AST('left')(op.at.valueAST);
-        } else if (op.type === "Insert") {
-          op.at.side = "right";
-          op.at.valueAST && apply2AST('right')(op.at.valueAST);
-        }
-      }
-    }
 
     const url = PARSER_SERVICE_URL;
     callback(function gumtreeDiffHandler(before, after) {
@@ -78,7 +78,7 @@ export default {
               reject(r)
             } else {
               const o0 = r.diff;
-              window.reloadGraph(r.impact || {perRoot:[],roots:[],tests:[]});
+              window.reloadGraph(r.impact || { perRoot: [], roots: [], tests: [] });
               const o = o0.actions;
               o.map(addSide)
               resolve(o);

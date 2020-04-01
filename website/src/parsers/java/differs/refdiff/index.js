@@ -1,12 +1,12 @@
 // import pkg from 'json-to-ast/package.json';
-import defaultParserInterface from '../../../utils/defaultParserInterface';
+import defaultDifferInterface from '../../../utils/defaultDifferInterface';
 const ID = 'RefDiff';
 const VERSION = '0.0.0';
 const HOMEPAGE = 'https://github.com/aserg-ufmg/RefDiff';
 const PARSER_SERVICE_URL = 'http://131.254.17.96:8089/RefDiff';
 
 export default {
-  ...defaultParserInterface,
+  ...defaultDifferInterface,
   id: ID,
   displayName: ID,
   version: VERSION,

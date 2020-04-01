@@ -1,5 +1,5 @@
 // import pkg from 'json-to-ast/package.json';
-import defaultParserInterface from '../../../utils/defaultParserInterface';
+import defaultDifferInterface from '../../../utils/defaultDifferInterface';
 
 const ID = 'RefactoringMiner';
 const VERSION = '0.0.0';
@@ -8,26 +8,50 @@ const HOMEPAGE = 'https://github.com/tsantalis/RefactoringMiner';
 // const PARSER_SERVICE_URL = 'http://131.254.17.96:8095/diff/RefactoringMiner';
 const PARSER_SERVICE_URL = 'http://127.0.0.1:8095/diff/RefactoringMiner';
 
+function addSide(op) { // TODO remove it
+  op.leftSideLocations.map(x => x.side = "left")
+  op.rightSideLocations.map(x => x.side = "right")
+}
+
 export default {
-  ...defaultParserInterface,
+  ...defaultDifferInterface,
   id: ID,
   displayName: ID,
   version: VERSION,
   homepage: HOMEPAGE,
   locationProps: new Set(['loc', 'start', 'end', 'side']),
-  typeProps: new Set(['type'/*, "node type"*/]),
+  typeProps: new Set(['type', 'codeElementType'/*, 'node type'*/]),
   // _ignoredProperties: new Set(['loc', 'side']),
 
   // opensByDefault(_node, _key) {
   //   return _key === "actions";
   // },
 
-  loadDiffer(callback) {
+  // loadDiffer(callback) {
+  //   callback(async function refminerDiffHandler(old, neww) {
+  //     const response = await differAPI(`/RefactoringMiner`, {
+  //       method: 'PUT',
 
-    function addSide(op) {
-      op.leftSideLocations.map(x => x.side = "left")
-      op.rightSideLocations.map(x => x.side = "right")
-    }
+  //     });
+  //     const o0 = response.diff;
+  //     window.reloadGraph(response.impact || { perRoot: [], roots: [], tests: [] });
+  //     const o = o0.commits;
+  //     resolve(o);
+  //     return response
+  //   });
+  // },
+
+  processEvolutions(evolutions) {
+    const res = evolutions.commits;
+    res.forEach(x => x.refactorings.forEach(addSide))
+    return res
+  },
+
+  processImpacts(impacts) {
+    return impacts || { perRoot: [], roots: [], tests: [] }
+  },
+
+  loadDiffer(callback) {
 
     const url = PARSER_SERVICE_URL;
     callback(function refminerDiffHandler(old, neww) {
@@ -39,6 +63,8 @@ export default {
       xhr.setRequestHeader('Access-Control-Allow-Credentials', 'true');
       // xhr.setRequestHeader('Content-Type', 'text/plain');
       xhr.setRequestHeader('Content-Type', "application/json");
+      xhr.onprogress = (() => console.log("refminer handling in progress"))
+      xhr.onloadstart = (() => console.log("refminer handling load started"))
       return new Promise(
         (resolve, reject) => {
           xhr.onload = (e) => {
@@ -47,13 +73,12 @@ export default {
               // reject(r)
               return
             }
-            debugger
             const r = JSON.parse(xhr.response)
             if (r.error === "java.lang.NullPointerException") {
               reject(r)
             } else {
               const o0 = r.diff;
-              window.reloadGraph(r.impact || {perRoot:[],roots:[],tests:[]});
+              window.reloadGraph(r.impact || { perRoot: [], roots: [], tests: [] });
               const o = o0.commits;
               o.map(x => x.refactorings.map(addSide))
               resolve(o);
@@ -88,5 +113,27 @@ export default {
     if (typeof node.start === 'number') {
       return [node.start, node.end];
     }
+  },
+
+  getDefaultOptions() {
+    return {
+      evolutions: {
+        'Move Method': true,
+        'Rename Method': true,
+      },
+    };
+  },
+  _getSettingsConfiguration(defaultOptions) {
+    return {
+      fields: [
+        {
+          key: 'evolutions',
+          title: 'Evolutions',
+          fields: Object.keys(defaultOptions.evolutions),
+          settings:
+            settings => settings.evolutions || { ...defaultOptions.evolutions },
+        }
+      ],
+    };
   },
 };
