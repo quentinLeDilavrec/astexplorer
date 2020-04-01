@@ -35,7 +35,7 @@ class TreeAdapter {
     if (this._ranges.has(node)) {
       return this._ranges.get(node);
     }
-    const {nodeToRange} = this._adapterOptions;
+    const { nodeToRange } = this._adapterOptions;
     let range = nodeToRange(node);
     if (node && typeof node === 'object') {
       this._ranges.set(node, range);
@@ -43,20 +43,61 @@ class TreeAdapter {
     return range;
   }
 
-  isInRange(node, position) {
+  /** @private */
+  _isInRange(node, position) {
+    let offset = position
+    if (position === null) {
+      return false
+    }
+    if (typeof position === 'object') {
+      if (node.filePath && position.filePath !== node.filePath) {
+        return false;
+      }
+      if (node.commitId && position.commitId !== node.commitId) {
+        return false;
+      }
+      if (node.sha1 && position.commitId !== node.sha1) {
+        return false;
+      }
+      if (isValidPosition(position.start) &&
+        isValidPosition(position.end)) {
+        const range = this.getRange(node);
+        if (!range) {
+          return false;
+        }
+        return (range[1] >= position.start &&
+          position.end >= range[0])
+      }
+      if (!isValidPosition(position.offset)) {
+        return false;
+      }
+      offset = position.offset;
+    }
     if (!isValidPosition(position)) {
-      return false;
+      return false
     }
     const range = this.getRange(node);
     if (!range) {
       return false;
     }
-    return range[0] <= position && position <= range[1];
+    return range[0] <= offset && offset <= range[1];
   }
 
-  hasChildrenInRange(node, position, seen=new Set()) {
-    if (!isValidPosition(position)) {
-      return false;
+  isInRange(node, position) {
+    if (Array.isArray(position)) {
+      for (const p of position) {
+        if (this._isInRange(node, p)) {
+          return true
+        }
+      }
+      return false
+    }
+    return this._isInRange(node, position)
+  }
+
+  hasChildrenInRange(node, position, seen = new Set()) {
+    if (!isValidPosition(position) && typeof position !== 'object') {
+       return false;
     }
     seen.add(node);
     const range = this.getRange(node);
@@ -66,12 +107,12 @@ class TreeAdapter {
     // Not everything that is rendered has location associated with it (most
     // commonly arrays). In such a case we are a looking whether the node
     // contains any other nodes with location data (recursively).
-    for (const {value: child} of this.walkNode(node)) {
+    for (const { value: child } of this.walkNode(node)) {
       if (this.isInRange(child, position)) {
         return true;
       }
     }
-    for (const {value: child} of this.walkNode(node)) {
+    for (const { value: child } of this.walkNode(node)) {
       if (seen.has(child)) {
         continue;
       }
@@ -125,8 +166,8 @@ const TreeAdapterConfigs = {
     filters: [],
     openByDefault: () => false,
     nodeToRange: () => null,
-    nodeToName: () => { throw new Error('nodeToName must be passed');},
-    walkNode: () => { throw new Error('walkNode must be passed');},
+    nodeToName: () => { throw new Error('nodeToName must be passed'); },
+    walkNode: () => { throw new Error('walkNode must be passed'); },
   },
 
   estree: {
@@ -180,11 +221,11 @@ function isValidPosition(position) {
   return Number.isInteger(position);
 }
 
-export function ignoreKeysFilter(keys=new Set(), key, label) {
+export function ignoreKeysFilter(keys = new Set(), key, label) {
   return {
     key,
     label,
-    test(_, key) { return  keys.has(key); },
+    test(_, key) { return keys.has(key); },
   };
 }
 
@@ -230,7 +271,7 @@ function createTreeAdapter(type, adapterOptions, filterValues) {
   );
 }
 
-export function treeAdapterFromParseResult({treeAdapter}, filterValues) {
+export function treeAdapterFromParseResult({ treeAdapter }, filterValues) {
   return createTreeAdapter(
     treeAdapter.type,
     treeAdapter.options,
