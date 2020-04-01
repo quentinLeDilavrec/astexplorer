@@ -16,7 +16,7 @@ function makeFiles(files) {
 function getDataFromBody(body, additionalData={}) {
   const files = [
     [
-      'astexplorer.json',
+      'config.json',
       JSON.stringify(
         Object.assign(
           {
@@ -25,6 +25,12 @@ function getDataFromBody(body, additionalData={}) {
             toolID: body.toolID,
             settings: body.settings,
             versions: body.versions,
+
+            mode: body.mode,
+            evoMinerID: body.evoMinerID,
+            minedEvolutions: body.minedEvolutions,
+            minedEvoImpacts: body.minedEvoImpacts,
+            instance: body.instance,
           },
           additionalData
         ),
@@ -32,12 +38,19 @@ function getDataFromBody(body, additionalData={}) {
         2
       ),
     ],
-    [body.filename, body.code],
   ];
 
   // null value indicates deletion
+  if (body.filename) {
+    files.push([body.filename, body.code]);
+  }
+  // null value indicates deletion
   if (body.transform || body.transform === null) {
     files.push(['transform.js', body.transform]);
+  }
+  // null value indicates deletion
+  if (body.codeBefore || body.codeBefore === null) {
+    files.push(['codeBefore.js', body.codeBefore]);
   }
 
   return {
