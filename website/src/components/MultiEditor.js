@@ -10,6 +10,7 @@ import SplitPane from './SplitPane';
 // import CodeEditorContainer from '../container/CodeEditorContainer';
 import Editor2 from './Editor2';
 import DiffEditor from './DiffEditor';
+import RemoteFileService from '../coevolutionService/file';
 
 const defaultPrettierOptions = {
   printWidth: 80,
@@ -243,7 +244,7 @@ function isTest(d) {
 }
 
 function findimpactedTests(node, max_depth = Infinity) {
-  // TODO do not rely on d3 to mocve in the graph
+  // TODO do not rely on d3 to move in the graph
   const r = []
   const stack = [node]
   const dstack = [0]
@@ -261,7 +262,8 @@ function findimpactedTests(node, max_depth = Infinity) {
 }
 
 function findRoot(node) {
-  // TODO do not rely on d3 to mocve in the graph
+  // TODO put it in some utils file
+  // TODO do not rely on d3 to move in the graph
   const r = []
   const stack = [node]
   while (stack.length > 0) {
@@ -294,12 +296,12 @@ function graphNodesToSecenario(graphNodes, repo, commitIdBefore, commitIdAfter) 
   } else {
     return {
       type: UNSPEC_TYPE, what: UNSPEC_WHAT,
-      before: root.evolution.before.map(x =>
+      before: root.evolution.before.slice(0, 6).map(x =>
         node2diff(x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from')),
-      after: root.evolution.after.map(x =>
+      after: root.evolution.after.slice(0, 6).map(x =>
         node2diff(x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to')),
     impacts:
-        impactedTests.slice(0, 3).map(x => node2diff(x.value.position, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
+        impactedTests.slice(0, 6).map(x => node2diff(x.value.position, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
     }
   }
 }
@@ -349,18 +351,46 @@ function scenario2Layout(scenario) {
 }
 
 // const SERVICE_URL = 'http://131.254.17.96:8095/data/default';
-const SERVICE_URL = 'http://127.0.0.1:8095/data/default';
+const USE_FETCH = true
+
+const fileHandler = {
+  id: 'default',
+  processFile(json) {
+    if (json.error) {
+      throw new Error(json.error)
+    } else {
+      return json
+    }
+  }
+}
 
 async function getContent(repo, commitId, path, mode) {
+  if (USE_FETCH) {
+    return RemoteFileService(fileHandler, {
+      repo,
+      commitId,
+      path,
+    })
+      .then(x => {
+        return CodeMirror.Doc(x.content, mode)
+      })
+      .catch(x => {
+        // console.error(x)
+        return CodeMirror.Doc(x.name + ': ' + x.message)
+      });
+  } else {
   console.log(4982, arguments)
   const xhr = new XMLHttpRequest();
   xhr.open("PUT", SERVICE_URL);
   xhr.withCredentials = true;
-  xhr.setRequestHeader('Access-Control-Allow-Origin', 'http://131.254.17.96:8087');
-  xhr.setRequestHeader('Access-Control-Allow-Credentials', 'true');
+    // xhr.setRequestHeader('Access-Control-Allow-Origin', 'http://131.254.17.96:8087');
+    xhr.setRequestHeader('Access-Control-Allow-Origin', 'http://176.180.199.146:50001');
+    // xhr.setRequestHeader('Access-Control-Allow-Credentials', 'true');
   // xhr.setRequestHeader('Content-Type', 'text/plain');
   // xhr.setRequestHeader('Content-Type', "application/json; charset=utf-8");
   xhr.setRequestHeader('Content-Type', "application/json");
+    xhr.onprogress = (() => console.log("data handling in progress"))
+    xhr.onloadstart = (() => console.log("data handling load started"))
   return new Promise(
     (resolve, reject) => {
       xhr.onload = (e) => {
@@ -394,6 +424,7 @@ async function getContent(repo, commitId, path, mode) {
       console.error(x)
       return CodeMirror.Doc(x)
     });
+}
 }
 
 function resize() {
@@ -460,6 +491,7 @@ export default class MultiEditor extends React.Component {
         // oldvalue={x.before.content}
         ref={async (y) => {
           if (y) {
+            // TODO get back old doc and memoize them (with React? )
             y.setMirrorsValue({
               before: { ...x.before, doc: await getContent(x.before.repo, x.before.commitId, x.before.path, this.props.mode) },
               after: { ...x.after, doc: await getContent(x.after.repo, x.after.commitId, x.after.path, this.props.mode) }
@@ -598,7 +630,10 @@ export default class MultiEditor extends React.Component {
       PubSub.subscribe('CHANGE_DIFF_CONTEXT', (_, graphNodes) => {
         const { node, root } = graphNodes
         console.log(684, node, root)
-        const x = graphNodesToSecenario(graphNodes, window.currentTarget.repo, window.currentTarget.commitIdBefore, window.currentTarget.commitIdAfter)
+        const x = graphNodesToSecenario(graphNodes,
+          this.state.value.instance.repo,
+          this.state.value.instance.commitIdBefore,
+          this.state.value.instance.commitIdAfter)
 
         this.setState({
           ...this.state,
@@ -680,9 +715,6 @@ export default class MultiEditor extends React.Component {
     this._unbindHandlers();
     this._markerRange = null;
     this._mark = null;
-    let container = this.container;
-    container.removeChild(container.children[0]);
-    // this.codeMirror = null;
   }
 
   // componentDidUpdate() {
@@ -775,9 +807,6 @@ export default class MultiEditor extends React.Component {
 
   render() {
     return this._layoutRenderer(scenario2Layout(this.state.value));
-    //  (
-    //   <div ref={c => this.container = c} />
-    // );
   }
 }
 
