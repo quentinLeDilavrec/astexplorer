@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import cx from 'classnames';
-import {getDifferByID} from '../../parsers';
+import { getDifferByID } from '../../parsers';
 
 export default class EvolveButton extends React.Component {
   constructor(props) {
@@ -10,7 +10,7 @@ export default class EvolveButton extends React.Component {
     this._onToggle = this._onToggle.bind(this);
   }
 
-  _onClick({target}) {
+  _onClick({ target }) {
     let differID;
     if (target.nodeName.toLowerCase() === 'li') {
       differID = target.children[0].value;
@@ -48,21 +48,31 @@ export default class EvolveButton extends React.Component {
           />
           &nbsp;Evolve
         </button>
-        {!!this.props.category.differs.length && <ul>
-          {this.props.category.differs.map(differ => (
-            <li
-              key={differ.id}
-              className={cx({
-                selected: this.props.showDiffer &&
-                  this.props.differ === differ,
-              })}
-              onClick={this._onClick}>
-              <button value={differ.id} type="button" >
-                {differ.displayName}
-              </button>
-            </li>
-          ))}
-        </ul>}
+        {!!this.props.category.differs.length &&
+          <ul>
+            {this.props.category.differs.map(differ => (
+              <li
+                key={differ.id}
+                className={cx({
+                  selected: this.props.showDiffer &&
+                    this.props.differ === differ,
+                })}
+                onClick={this._onClick}>
+                <button value={differ.id} type="button" >
+                  {differ.displayName}
+                </button>
+              </li>
+            ))}
+          </ul>}
+        <button
+          type="button"
+          title="Evolve Settings"
+          style={{ minWidth: 0 }}
+          disabled={!this.props.differ.hasSettings()}
+          onClick={this.props.onDifferSettingsButtonClick}>
+          <i className="fa fa-cog fa-fw" />
+        </button>
+        {/* <i className="fa fa-lg fa-spinner fa-pulse"></i> */}
       </div>
     );
   }

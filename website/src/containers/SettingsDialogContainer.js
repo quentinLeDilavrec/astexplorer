@@ -1,19 +1,26 @@
-import {connect} from 'react-redux';
-import {closeSettingsDialog, setParserSettings} from '../store/actions';
-import {showSettingsDialog, getParser, getParserSettings} from '../store/selectors';
+import { connect } from 'react-redux';
+import { closeSettingsDialog, setParserSettings, setDifferSettings } from '../store/actions';
+import { showSettingsDialog, getParser, getParserSettings, getDiffer, getDifferSettings } from '../store/selectors';
 import SettingsDialog from '../components/dialogs/SettingsDialog';
 
 function mapStateToProps(state) {
+  const cat = showSettingsDialog(state)
   return {
-    visible: showSettingsDialog(state),
-    parser: getParser(state),
-    parserSettings: getParserSettings(state),
+    category: cat,
+    visible: !!cat,
+    tool: cat === 'evolve' ? getDiffer(state) : getParser(state),
+    toolSettings: cat === 'evolve'
+      ? getDifferSettings(state)
+      : getParserSettings(state),
   };
 }
 
 function mapDispatchToProps(dispatch) {
   return {
-    onSave: (parser, newSettings) => dispatch(setParserSettings(newSettings)),
+    onSave: (category, newSettings) =>
+      dispatch(category === 'evolve'
+        ? setDifferSettings(newSettings)
+        : setParserSettings(newSettings)),
     onWantToClose: () => dispatch(closeSettingsDialog()),
   };
 }

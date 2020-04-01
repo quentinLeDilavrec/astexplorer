@@ -9,12 +9,12 @@ export default class SettingsDialog extends React.Component {
     this._reset = this._reset.bind(this);
     this._saveAndClose = this._saveAndClose.bind(this);
     this.state = {
-      parserSettings: this.props.parserSettings,
+      toolSettings: this.props.toolSettings,
     };
   }
 
   UNSAFE_componentWillReceiveProps(nextProps) {
-    this.setState({parserSettings: nextProps.parserSettings});
+    this.setState({toolSettings: nextProps.toolSettings});
   }
 
   _outerClick(event) {
@@ -24,29 +24,29 @@ export default class SettingsDialog extends React.Component {
   }
 
   _onChange(newSettings) {
-    this.setState({parserSettings: newSettings});
+    this.setState({toolSettings: newSettings});
   }
 
   _saveAndClose() {
-    this.props.onSave(this.props.parser, this.state.parserSettings);
+    this.props.onSave(this.props.category, this.state.toolSettings);
     this.props.onWantToClose();
   }
 
   _reset() {
-    this.setState({parserSettings: {}});
+    this.setState({toolSettings: {}});
   }
 
   render() {
-    if (this.props.visible && this.props.parser.renderSettings) {
+    if (this.props.visible && this.props.tool.renderSettings) {
       return (
         <div id="SettingsDialog" className="dialog" onClick={this._outerClick}>
           <div className="inner">
             <div className="header">
-              <h3>{this.props.parser.displayName} Settings</h3>
+              <h3>{this.props.tool.displayName} Settings</h3>
             </div>
             <div className="body">
-              {this.props.parser.renderSettings(
-                this.state.parserSettings,
+              {this.props.tool.renderSettings(
+                this.state.toolSettings,
                 this._onChange,
               )}
             </div>
@@ -68,6 +68,6 @@ SettingsDialog.propTypes = {
   onSave: PropTypes.func,
   onWantToClose: PropTypes.func,
   visible: PropTypes.bool,
-  parser: PropTypes.object.isRequired,
-  parserSettings: PropTypes.object,
+  tool: PropTypes.object.isRequired,
+  toolSettings: PropTypes.object,
 };

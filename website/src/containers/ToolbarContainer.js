@@ -49,19 +49,21 @@ function mapDispatchToProps(dispatch) {
       dispatch(openSettingsDialog());
       logEvent('parser', 'open_settings');
     },
+    onDifferSettingsButtonClick: () => {
+      dispatch(openSettingsDialog('evolve'));
+      logEvent('differ', 'open_settings');
+    },
     onShareButtonClick: () => {
       dispatch(openShareDialog());
       logEvent('ui', 'open_share');
     },
     onTransformChange: transformer => {
-      // debugger
       dispatch(transformer ? selectTransformer(transformer) : hideTransformer());
       if (transformer) {
         logEvent('tool', 'select', transformer.id);
       }
     },
     onDiffChange: diff => {
-      // debugger
       dispatch(diff ? selectDiffer(diff) : hideDiff());
       if (diff) {
         logEvent('tool', 'select', diff.id);
