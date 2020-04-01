@@ -1,5 +1,6 @@
 import * as actions from './actions';
 import { getCategoryByID, getDefaultParser, getParserByID, getTransformerByID, getDifferByID } from '../parsers';
+import queryString from 'query-string';
 
 const defaultParser = getDefaultParser(getCategoryByID('javascript'));
 
@@ -26,6 +27,8 @@ const initialState = {
 
   // Remember selected parser per category
   parserPerCategory: {},
+
+  activeInstance: null,
 
   workbench: {
     parser: defaultParser.id,
@@ -90,12 +93,12 @@ export function revive(state = initialState) {
 
 export function astexplorer(state = initialState, action) {
   console.log(46, state, action)
-  // debugger
   return {
     // UI related state
     showSettingsDialog: showSettingsDialog(state.showSettingsDialog, action),
     showShareDialog: showShareDialog(state.showShareDialog, action),
     loadingSnippet: loadSnippet(state.loadingSnippet, action),
+    loadingInstance: loadInstance(state.loadingInstance, action),
     saving: saving(state.saving, action),
     forking: forking(state.forking, action),
     cursor: cursor(state.cursor, action),
@@ -106,9 +109,13 @@ export function astexplorer(state = initialState, action) {
     // Snippet related state
     activeRevision: activeRevision(state.activeRevision, action),
 
+    // Instance related state
+    activeInstance: activeInstance(state.activeInstance, action),
+
     // Workbench settings
     parserPerCategory: parserPerCategory(state.parserPerCategory, action),
     parserSettings: parserSettings(state.parserSettings, action, state),
+    differSettings: differSettings(state.differSettings, action, state),
     workbench: workbench(state.workbench, action, state),
     enableFormatting: format(state.enableFormatting, action, state),
   };
@@ -148,10 +155,19 @@ function workbench(state = initialState.workbench, action, fullState) {
       };
     case actions.SET_PARSE_RESULT:
       return { ...state, parseResult: action.result };
+    // TODO set ParserStatus
     case actions.SET_DIFF_RESULT:
       return { ...state, diffResult: action.result };
+    case actions.SET_EVO_IMPACT_RESULT:
+      return { ...state, evoImpactResult: action.result };
+    case actions.SET_DIFF_STATUS:
+      return { ...state, diffResult: { ...state.diffResult, status: action.status } };
+    case actions.SET_EVO_IMPACT_STATUS:
+      return { ...state, evoImpactResult: { ...state.evoImpactResult, status: action.status } };
     case actions.SET_PARSER_SETTINGS:
       return { ...state, parserSettings: action.settings };
+    case actions.SET_DIFFER_SETTINGS:
+      return { ...state, differSettings: action.settings };
     case actions.SET_PARSER:
       {
         const newState = { ...state, parser: action.parser.id };
@@ -166,8 +182,6 @@ function workbench(state = initialState.workbench, action, fullState) {
       return { ...state, code: action.code };
     case actions.SELECT_TRANSFORMER:
       {
-        // debugger
-
         const differentParser =
           action.transformer.defaultParserID !== state.parser;
         const differentTransformer =
@@ -222,8 +236,9 @@ function workbench(state = initialState.workbench, action, fullState) {
         // }
         // newState2.code = fullState.workbench.diff.code;
         if (differentDiffer) {
-          const snippetHasDifferentDiff = fullState.activeRevision &&
-            fullState.activeRevision.getDifferID() === action.differ.id;
+          const snippetHasDifferentDiff = fullState.activeRevision && false
+          //   fullState.activeRevision.getDifferID() === action.differ.id;
+
           // console.log(44, snippetHasDifferentDiff, state.diff.code, action.differ.defaultDiff)
           newState2.diff = {
             ...state.diff,
@@ -262,7 +277,7 @@ function workbench(state = initialState.workbench, action, fullState) {
         const { revision } = action;
 
         const transformerID = revision.getTransformerID();
-        const differID = revision.getDifferID();
+        // const differID = revision.getDifferID();
         const parserID = revision.getParserID();
 
         return {
@@ -279,9 +294,9 @@ function workbench(state = initialState.workbench, action, fullState) {
           },
           diff: {
             ...state.diff,
-            differ: differID,
-            code: revision.getDiffCode() || state.diff.code || state.code,
-            initialCode: revision.getDiffCode(),
+            // differ: differID,
+            code: (revision.getDiffCode && revision.getDiffCode()) || state.diff.code || state.code,
+            initialCode: (revision.getDiffCode && revision.getDiffCode()),
           },
         };
       }
@@ -304,9 +319,7 @@ function workbench(state = initialState.workbench, action, fullState) {
             initialCode: transformer.defaultTransform,
           };
         }
-        // console.log(32, action)
-        // debugger;
-        if (fullState.activeRevision && fullState.activeRevision.getDifferID() || reset && state.diff.differ) {
+        if (fullState.activeRevision && true /*fullState.activeRevision.getDifferID()*/ || reset && state.diff.differ) {
           // Clear transform as well
           const differ = getDifferByID(state.diff.differ);
           newState.diff = {
@@ -341,6 +354,23 @@ function parserSettings(state = initialState.parserSettings, action, fullState) 
   }
 }
 
+function differSettings(state = initialState.differSettings, action, fullState) {
+  switch (action.type) {
+    case actions.SET_DIFFER_SETTINGS:
+      if (fullState.activeRevision) {
+        // If a revision is loaded, we are **not** storing changes to the
+        // settings in our local copy
+        return state;
+      }
+      return {
+        ...state,
+        [fullState.workbench.diff.differ]: action.settings,
+      };
+    default:
+      return state;
+  }
+}
+
 function parserPerCategory(state = initialState.parserPerCategory, action) {
   switch (action.type) {
     case actions.SET_PARSER:
@@ -353,7 +383,7 @@ function parserPerCategory(state = initialState.parserPerCategory, action) {
 function showSettingsDialog(state = initialState.showSettingsDialog, action) {
   switch (action.type) {
     case actions.OPEN_SETTINGS_DIALOG:
-      return true;
+      return action.payload;
     case actions.CLOSE_SETTINGS_DIALOG:
       return false;
     default:
@@ -377,6 +407,17 @@ function loadSnippet(state = initialState.loadingSnippet, action) {
     case actions.START_LOADING_SNIPPET:
       return true;
     case actions.DONE_LOADING_SNIPPET:
+      return false;
+    default:
+      return state;
+  }
+}
+
+function loadInstance(state = initialState.loadingInstance, action) {
+  switch (action.type) {
+    case actions.START_LOADING_INSTANCE:
+      return true;
+    case actions.DONE_LOADING_INSTANCE:
       return false;
     default:
       return state;
@@ -437,7 +478,6 @@ function error(state = initialState.error, action) {
 }
 
 function showTransformPanel(state = initialState.showTransformPanel, action) {
-  // debugger
   switch (action.type) {
     case actions.SELECT_TRANSFORMER:
       return true;
@@ -460,8 +500,8 @@ function showDiffPanel(state = initialState.showDiffPanel, action) {
     case actions.SELECT_CATEGORY:
     case actions.CLEAR_SNIPPET:
       return false;
-    case actions.SET_SNIPPET:
-      return Boolean(action.revision.getDifferID());
+    // case actions.SET_SNIPPET:
+    //   return Boolean(action.revision.getDifferID());
     default:
       return state;
   }
@@ -475,6 +515,25 @@ function activeRevision(state = initialState.selectedRevision, action) {
     case actions.CLEAR_SNIPPET:
     case actions.RESET:
       return null;
+    default:
+      return state;
+  }
+}
+
+function activeInstance(state = initialState.activeInstance, action) {
+  switch (action.type) {
+    case 'INIT':
+    case actions.SET_SNIPPET:
+      if (location.search.length > 1) {
+        const parsed = queryString.parse(location.search);
+        return parsed;
+      }
+    case actions.LOAD_INSTANCE:
+      return action.instance || state;
+    // case actions.SELECT_CATEGORY:
+    // case actions.CLEAR_SNIPPET:
+    // case actions.RESET:
+    //   return null;
     default:
       return state;
   }

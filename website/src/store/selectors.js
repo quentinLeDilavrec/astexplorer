@@ -1,6 +1,6 @@
-import {createSelector} from 'reselect';
+import { createSelector } from 'reselect';
 import isEqual from 'lodash.isequal';
-import {getParserByID, getTransformerByID, getDifferByID} from '../parsers';
+import { getParserByID, getTransformerByID, getDifferByID } from '../parsers';
 
 // UI related
 
@@ -18,6 +18,10 @@ export function getError(state) {
 
 export function isLoadingSnippet(state) {
   return state.loadingSnippet;
+}
+
+export function isLoadingInstance(state) {
+  return state.loadingInstance;
 }
 
 export function showSettingsDialog(state) {
@@ -46,6 +50,7 @@ export function getParserSettings(state) {
   return state.workbench.parserSettings;
 }
 
+
 export function getParseResult(state) {
   return state.workbench.parseResult;
 }
@@ -63,7 +68,7 @@ export function getInitialCode(state) {
   return state.workbench.initialCode;
 }
 
-export function getKeyMap (state) {
+export function getKeyMap(state) {
   return state.workbench.keyMap;
 }
 
@@ -135,12 +140,26 @@ export function getDiffResult(state) {
   return state.workbench.diffResult;
 }
 
+export function getEvoImpactResult(state) {
+  return state.workbench.evoImpactResult;
+}
+
 export function getDiffCode(state) {
   return state.workbench.diff.code;
 }
 
 export function getInitialDiffCode(state) {
   return state.workbench.diff.initialCode;
+}
+
+export function getDiffStatus(state) {
+  return (state.workbench.diffResult &&
+    state.workbench.diffResult.status);
+}
+
+export function getEvoImpactStatus(state) {
+  return (state.workbench.evoImpactResult &&
+    state.workbench.evoImpactResult.status);
 }
 
 export function getDiffer(state) {
@@ -151,9 +170,29 @@ export function showDiffer(state) {
   return state.showDiffPanel;
 }
 
+export function getDifferSettings(state) {
+  return state.workbench.diff.differSettings;
+}
+
+const didDifferSettingsChange = createSelector(
+  [getDifferSettings, getRevision, getDiffer],
+  (differSettings, revision, differ) => {
+    const savedDifferSettings = revision && revision.getDifferSettings && revision.getDifferSettings();
+    return (
+      !!revision &&
+      (
+        (revision.getDifferID &&
+          differ.id !== revision.getDifferID()) ||
+        !!savedDifferSettings && !isEqual(differSettings, savedDifferSettings)
+      )
+    )
+
+  },
+);
+
 const isDiffDirty = createSelector(
-  [getDiffCode, getInitialDiffCode],
-  (code, initialCode) => code !== initialCode,
+  [getDiffCode, getInitialDiffCode, isCodeDirty],
+  (code, initialCode, codeDirty) => code !== initialCode || codeDirty,
 );
 
 export const canSaveDiff = createSelector(
@@ -161,10 +200,17 @@ export const canSaveDiff = createSelector(
   (showDiffer, dirty) => showDiffer && dirty,
 );
 
+// instance related
+
+export function getInstance(state) {
+  return state.activeInstance;
+}
+
+// save related
 export const canSave = createSelector(
-  [getRevision, canSaveCode, canSaveTransform, canSaveDiff, didParserSettingsChange],
-  (revision, canSaveCode, canSaveTransform, canSaveDiff, didParserSettingsChange) => (
-    (canSaveCode || canSaveTransform || canSaveDiff || didParserSettingsChange) &&
+  [getRevision, canSaveCode, canSaveTransform, canSaveDiff, didParserSettingsChange, didDifferSettingsChange],
+  (revision, canSaveCode, canSaveTransform, canSaveDiff, didParserSettingsChange, didDifferSettingsChange) => (
+    (canSaveCode || canSaveTransform || canSaveDiff || didParserSettingsChange || didDifferSettingsChange) &&
     (!revision || revision.canSave())
   ),
 );
