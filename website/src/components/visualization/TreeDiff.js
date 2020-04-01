@@ -100,5 +100,5 @@ export default function TreeDiff({parseResult, position}) {
 
 TreeDiff.propTypes = {
   parseResult: PropTypes.object,
-  position: PropTypes.number,
+  position: PropTypes.oneOfType([PropTypes.number,PropTypes.object]),
 };
