@@ -49,6 +49,7 @@
     "@types/codemirror": "0.0.88",
     "@types/d3": "^5.7.2",
     "@types/pubsub-js": "^1.5.18",
+    "@types/query-string": "^6.3.0",
     "@typescript-eslint/parser": "^2.6.1",
     "@webassemblyjs/wast-parser": "^1.5.6",
     "acorn": "^7.0.0",
