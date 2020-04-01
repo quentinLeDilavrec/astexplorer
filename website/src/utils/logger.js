@@ -1,3 +1,5 @@
+global.ga = console.log
+
 export function logEvent(category, action, label) {
   global.ga('send', 'event', category, action, label);
 }
