@@ -152,6 +152,7 @@
     "typescript": "^3.7.2",
     "typescript-eslint-parser": "^22.0.0",
     "uglify-es": "^3.0.28",
+    "uuid": "^7.0.3",
     "vue-template-compiler": "^2.6.9",
     "webidl2": "^23.5.1",
     "yaml": "^1.7.2",
