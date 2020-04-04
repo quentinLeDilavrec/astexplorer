@@ -1,0 +1,602 @@
+{
+    "CHANGE_ATTRIBUTE_TYPE": {
+        "left": [
+            {
+                "value": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "changed-type attribute declaration"
+            }
+        ]
+    },
+    "CHANGE_RETURN_TYPE": {
+        "left": [
+            {
+                "value": "original return type"
+            }
+        ],
+        "right": [
+            {
+                "value": "changed return type"
+            }
+        ]
+    },
+    "CHANGE_VARIABLE_TYPE": {
+        "left": [
+            {
+                "value": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "changed-type variable declaration"
+            }
+        ]
+    },
+    "CHANGE_PARAMETER_TYPE": {
+        "left": [
+            {
+                "value": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "changed-type variable declaration"
+            }
+        ],
+        "partOf": "CHANGE_VARIABLE_TYPE"
+    },
+    "CONVERT_ANONYMOUS_CLASS_TO_TYPE": {
+        "left": [
+            {
+                "value": "anonymous class declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "added type declaration"
+            }
+        ]
+    },
+    "EXTRACT_ATTRIBUTE": {
+        "left": [
+            {
+                "many": true,
+                "value": "statement with the initializer of the extracted attribute"
+            }
+        ],
+        "right": [
+            {
+                "value": "extracted attribute declaration"
+            },
+            {
+                "many": true,
+                "value": "statement with the name of the extracted attribute"
+            }
+        ]
+    },
+    "EXTRACT_SUBCLASS": {
+        "left": [
+            {
+                "value": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "extracted type declaration"
+            }
+        ],
+        "partOf": "EXTRACT_CLASS"
+    },
+    "EXTRACT_CLASS": {
+        "left": [
+            {
+                "value": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "extracted type declaration"
+            }
+        ]
+    },
+    "ExtractOperation": {
+        "left": [
+            {
+                "value": "source method declaration before extraction"
+            },
+            {
+                "many": true,
+                "value": "extracted code from source method declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "extracted method declaration"
+            },
+            {
+                "many": true,
+                "value": "extracted code to extracted method declaration"
+            },
+            {
+                "value": "source method declaration after extraction"
+            },
+            {
+                "many": true,
+                "value": "added statement in extracted method declaration"
+            },
+            {
+                "many": true,
+                "value": "added statement in extracted method declaration"
+            }
+        ]
+    },
+    "ExtractAndMoveOperation": {
+        "left": [
+            {
+                "value": "source method declaration before extraction"
+            },
+            {
+                "many": true,
+                "value": "extracted code from source method declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "extracted method declaration"
+            },
+            {
+                "many": true,
+                "value": "extracted code to extracted method declaration"
+            },
+            {
+                "value": "source method declaration after extraction"
+            },
+            {
+                "many": true,
+                "value": "added statement in extracted method declaration"
+            },
+            {
+                "many": true,
+                "value": "added statement in extracted method declaration"
+            }
+        ],
+        "partOf": "ExtractAndMoveOperation"
+    },
+    "EXTRACT_SUPERCLASS": {
+        "left": [
+            {
+                "many": true,
+                "value": "sub-type declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "extracted super-type declaration"
+            }
+        ]
+    },
+    "EXTRACT_INTERFACE": {
+        "left": [
+            {
+                "many": true,
+                "value": "sub-type declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "extracted super-type declaration"
+            }
+        ],
+        "partOf": "EXTRACT_SUPERCLASS"
+    },
+    "EXTRACT_VARIABLE": {
+        "left": [
+            {
+                "many": true,
+                "value": "statement with the initializer of the extracted variable"
+            }
+        ],
+        "right": [
+            {
+                "value": "extracted variable declaration"
+            },
+            {
+                "many": true,
+                "value": "statement with the name of the extracted variable"
+            }
+        ]
+    },
+    "INLINE_OPERATION": {
+        "left": [
+            {
+                "value": "inlined method declaration"
+            },
+            {
+                "many": true,
+                "value": "inlined code from inlined method declaration"
+            },
+            {
+                "value": "target method declaration before inline"
+            },
+            {
+                "many": true,
+                "value": "inlined method invocation"
+            },
+            {
+                "many": true,
+                "value": "deleted statement in inlined method declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "target method declaration after inline"
+            },
+            {
+                "value": "inlined code in target method declaration"
+            }
+        ]
+    },
+    "MOVE_AND_INLINE_OPERATION": {
+        "left": [
+            {
+                "value": "inlined method declaration"
+            },
+            {
+                "many": true,
+                "value": "inlined code from inlined method declaration"
+            },
+            {
+                "value": "target method declaration before inline"
+            },
+            {
+                "many": true,
+                "value": "inlined method invocation"
+            },
+            {
+                "many": true,
+                "value": "deleted statement in inlined method declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "target method declaration after inline"
+            },
+            {
+                "value": "inlined code in target method declaration"
+            }
+        ],
+        "partOf": "INLINE_OPERATION"
+    },
+    "INLINE_VARIABLE": {
+        "left": [
+            {
+                "value": "inlined variable declaration"
+            },
+            {
+                "many": true,
+                "value": "statement with the name of the inlined variable"
+            }
+        ],
+        "right": [
+            {
+                "many": true,
+                "value": "statement with the initializer of the inlined variable"
+            }
+        ]
+    },
+    "MERGE_ATTRIBUTE": {
+        "left": [
+            {
+                "many": true,
+                "value": "merged attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "new attribute declaration"
+            }
+        ]
+    },
+    "MERGE_VARIABLE": {
+        "left": [
+            {
+                "many": true,
+                "value": "merged variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "new variable declaration"
+            }
+        ]
+    },
+    "MERGE_PARAMETER": {
+        "left": [
+            {
+                "many": true,
+                "value": "merged variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "new variable declaration"
+            }
+        ],
+        "partOf": "MERGE_VARIABLE"
+    },
+    "MOVE_RENAME_ATTRIBUTE": {
+        "left": [
+            {
+                "value": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "moved and renamed attribute declaration"
+            }
+        ]
+    },
+    "MOVE_RENAME_CLASS": {
+        "left": [
+            {
+                "value": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "moved and renamed type declaration"
+            }
+        ]
+    },
+    "MOVE_ATTRIBUTE": {
+        "left": [
+            {
+                "value": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "moved attribute declaration"
+            }
+        ]
+    },
+    "MOVE_CLASS": {
+        "left": [
+            {
+                "value": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "moved type declaration"
+            }
+        ]
+    },
+    "MoveMethod": {
+        "left": [
+            {
+                "value": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "moved method declaration"
+            }
+        ]
+    },
+    "MOVE_AND_RENAME_OPERATION": {
+        "left": [
+            {
+                "value": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "moved method declaration"
+            }
+        ],
+        "partOf": "MOVE_OPERATION"
+    },
+    "MOVE_SOURCE_FOLDER": {
+        "left": [
+            {
+                "many": true,
+                "value": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "many": true,
+                "value": "moved type declaration"
+            }
+        ]
+    },
+    "PULL_UP_ATTRIBUTE": {
+        "left": [
+            {
+                "value": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "pulled up attribute declaration"
+            }
+        ]
+    },
+    "PULL_UP_OPERATION": {
+        "left": [
+            {
+                "value": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "pulled up method declaration"
+            }
+        ]
+    },
+    "PUSH_DOWN_ATTRIBUTE": {
+        "left": [
+            {
+                "value": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "pushed down attribute declaration"
+            }
+        ]
+    },
+    "PUSH_DOWN_OPERATION": {
+        "left": [
+            {
+                "value": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "pushed down method declaration"
+            }
+        ]
+    },
+    "RENAME_ATTRIBUTE": {
+        "left": [
+            {
+                "value": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "renamed attribute declaration"
+            }
+        ]
+    },
+    "RENAME_CLASS": {
+        "left": [
+            {
+                "value": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "renamed type declaration"
+            }
+        ]
+    },
+    "RENAME_METHOD": {
+        "left": [
+            {
+                "value": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "renamed method declaration"
+            }
+        ]
+    },
+    "RENAME_PACKAGE": {
+        "left": [
+            {
+                "value": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "moved type declaration"
+            }
+        ]
+    },
+    "RENAME_VARIABLE": {
+        "left": [
+            {
+                "value": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "renamed variable declaration"
+            }
+        ]
+    },
+    "RENAME_PARAMETER": {
+        "left": [
+            {
+                "value": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "renamed variable declaration"
+            }
+        ],
+        "partOf": "RENAME_VARIABLE"
+    },
+    "PARAMETERIZE_VARIABLE": {
+        "left": [
+            {
+                "value": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "renamed variable declaration"
+            }
+        ],
+        "partOf": "RENAME_VARIABLE"
+    },
+    "REPLACE_VARIABLE_WITH_ATTRIBUTE": {
+        "left": [
+            {
+                "value": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "renamed variable declaration"
+            }
+        ],
+        "partOf": "RENAME_VARIABLE"
+    },
+    "REPLACE_ATTRIBUTE": {
+        "left": [
+            {
+                "value": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "value": "replaced attribute declaration"
+            }
+        ]
+    },
+    "SPLIT_ATTRIBUTE": {
+        "left": [
+            {
+                "value": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "many": true,
+                "value": "split attribute declaration"
+            }
+        ]
+    },
+    "SPLIT_VARIABLE": {
+        "left": [
+            {
+                "value": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "many": true,
+                "value": "split variable declaration"
+            }
+        ]
+    }
+}
