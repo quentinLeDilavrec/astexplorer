@@ -29,9 +29,12 @@ export default function EvoGraphOutput({
   position = null,
   result = {},
   status = '?',
-  onSelection }) {
+  uuid,
+  onSelection,
+  returnScreenShot }) {
   const [selectedOutput, setSelectedOutput] = useState(0);
   let output;
+  let onScreenShot
   if (result.error) {
     output =
       <div style={{ padding: 20 }}>
@@ -43,7 +46,7 @@ export default function EvoGraphOutput({
         {
           React.createElement(
             visualizations[selectedOutput],
-            { graph: result.graph, position, onSelection },
+            { graph: result.graph, position, onSelection, uuid, onScreenShot: x => onScreenShot=x, returnScreenShot },
           )
         }
       </ErrorBoundary>
@@ -66,6 +69,8 @@ export default function EvoGraphOutput({
     <div className="output highlight">
       <div className="toolbar">
         {buttons}
+        <span className="fa fa-camera time" onClick={(...x)=>onScreenShot(...x)}>
+        </span>
         <span className="time">
           {betterLoadingDisplay(formatTime(result.time), status)}
         </span>
@@ -78,7 +83,10 @@ export default function EvoGraphOutput({
 EvoGraphOutput.propTypes = {
   result: PropTypes.object,
   status: PropTypes.string,
+  uuid: PropTypes.string,
   onSelection: PropTypes.func,
+  onScreenShot: PropTypes.func,
+  returnScreenShot: PropTypes.func,
 };
 
 class ErrorBoundary extends React.Component {

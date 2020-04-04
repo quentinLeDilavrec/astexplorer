@@ -6,7 +6,7 @@ import isequal from "lodash.isequal";
 
 const ONLY_TESTS_DECLS = false;
 
-export default class EvoImpactGraph extends Component {
+export default class EvoImpactGraphReworked extends Component {
 
   constructor(props) {
     super(props);
@@ -39,7 +39,6 @@ export default class EvoImpactGraph extends Component {
   }
 
   componentDidUpdate() {
-    debugger
     this.reloadGraph(this.state.graph)
   }
 
@@ -141,31 +140,30 @@ export default class EvoImpactGraph extends Component {
               source: tmp
             })
             data.byId[tmp] = data.byId[tmp] || {
-              // ...x, 
               "value": {
                 "sig": {
-                  "declType": "declType",
-                  "signature": "signature()",
-                  "name": "name",
+                  "declType": "",
+                  "signature": "",
+                  "name": "",
                   "id": 111111111111
                 },
                 "position": {
                   "isTest": true,
-                  "file": "file",
+                  "file": "",
                   "start": 1111111,
                   "end": 11111111,
                   "method": {
-                    "declType": "declType",
-                    "signature": "signature",
-                    "name": "name",
+                    "declType": "",
+                    "signature": "",
+                    "name": "",
                     "id": 111111111111111
                   }
                 }
               },
-              "causes": x.causes,
-              "effects": x.effects,
-              "isRoot": x.isRoot,
-              "depth": x.depth,
+              "causes": [],
+              "effects": [],
+              "isRoot": [],
+              "depth": x.depth+1,
               causes2: [],
               effects2: [],
               name: tmp,
@@ -177,7 +175,6 @@ export default class EvoImpactGraph extends Component {
             return tmp
           })
         });
-        // data.nodes = data.nodes.concat(z.vertices)
       });
       data.nodes = Object.values(data.byId);
     }
@@ -187,10 +184,7 @@ export default class EvoImpactGraph extends Component {
   drawGraphChart(data, max_depth) {
     console.log(data, JSON.stringify(data))
     const _this = this;
-
-
     const _graph = data
-
 
     function run(graph = _graph) {
       _this.refs.canvas &&
@@ -206,7 +200,7 @@ export default class EvoImpactGraph extends Component {
         .domain([1, 30])
         .range([20, height / 5 - 20]);
 
-      let width = graph.roots.length*1000;//400;
+      let width = graph.roots.length * 1000;
       let height = 600;
 
       let color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -215,57 +209,17 @@ export default class EvoImpactGraph extends Component {
       graph.roots.forEach((x, i) => zetgzerfg[x] = i)
 
       const graphLayout = d3.forceSimulation(graph.nodes)
-        // .alphaDecay(1 - Math.pow(0.001, 1 / 100))
-        // .force('charge', d3.forceManyBody().strength(.5))
         .force("charge", d3.forceManyBody().distanceMin(1000)
           .strength(d => isTest(d) ? (d.isTest ? -40 : -40) : -5000))
-        //   .strength(d => d.isRoot ? -100 : -50))
-        // .force("test", isolate(
-        //   d3.forceManyBody().distanceMax(800)
-        //     .strength(d => -800),
-        //   function (d) {
-        //     return isTest(d);
-        //   }))
-        // .force("src", isolate(
-        //   d3.forceManyBody().distanceMax(800)
-        //     .strength(d => isTest(d) ? (d.isTest ? -800 : -800) : -2000),
-        //   function (d) {
-        //     return !isTest(d)
-        //   }))
-        // .force("roots", isolate(
-        //   d3.forceManyBody().distanceMax(2000)
-        //     .strength(d => -100000),
-        //   function (d) {
-        //     return d.isRoot
-        //   }))
-        // .force("steelblue", isolate(d3.forceX(width / 6), function(d) { return d.color === "steelblue"; }))
-        // .force("center", d3.forceCenter(width / 2, height / 2))
         .force("y", d3.forceY(d => {
-          // if (isTest(d)) {
-          //   return 0//y(d.index + 100)
-          // }
-          // // if (isTest(d)) {
-          // //   return 1//y(d.index + 100)
-          // // }
-          // // else if ((graph.roots || []).includes(d.id)) {
-          // //   return height//y(d.index - 100)
-          // // }
-          // return height * .5 + height * .5 / ((d.depth || 1) + 1)
-
-          // // }).strength(d=>1-d.depth/(max_depth||d.depth)*.4))
           if (isTest(d)) {
             return 300 * d.depth - 50
           }
           return 300 * d.depth
         }).strength(d => isTest(d) ? .8 : 1.))
         .force("x", d3.forceX(d => {
-          return zetgzerfg[d.root] * 1000 //(width / graph.roots.length) * 40
+          return zetgzerfg[d.root] * 1000
         }).strength(d => d.isRoot ? (1) : .2))
-        // // .force("y", d3.forceY(height / 2).strength(1))
-        // .force("collision", d3.forceCollide(40)
-        //   // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : 10) * NODE_SIZE)
-        //   // .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
-        // )
         .force("link", d3.forceLink(graph.links)
           .id(function (d) { return d.id; })
           .distance(d => isTest(d) ? 10 : 20).strength(.1));
@@ -280,41 +234,8 @@ export default class EvoImpactGraph extends Component {
         d.source.effects2.push(d);
       });
 
-      // const zdazdaz = []
-      // for (let i = 1; i < graph.roots.length; i++) {
-      //   zdazdaz.push({
-      //     source: graph.roots[i - 1] + " " + graph.roots[i - 1],
-      //     target: graph.roots[i] + " " + graph.roots[i]
-      //   })
-      // }
-      // graphLayout
-      //   .force("link-roots", d3.forceLink(zdazdaz)
-      //     .id(function (d) { return d.id; })
-      //     .distance(d => 3 * size(d.target) * size(d.source)).strength(.3));
-
-
-      // function size(d) {
-      //   if (d.effects2.length <= 0) {
-      //     return 1
-      //   }
-      //   let r = 0
-      //   d.effects2.forEach(x => {
-      //     Math.max(r, size(x.target))
-      //   })
-      //   return r
-      // }
-      // graph.roots.forEach(element => {
-      //   graphLayout.force("g" + element, isolate(
-      //     d3.forceManyBody().distanceMax(10000)
-      //       .strength(d => 5000),
-      //     function (d) {
-      //       return d.root == element
-      //     }))
-      // });
-
       setTimeout(function () {
         graphLayout
-        // .force("x", null)
         graphLayout.restart();
       }, 1000)
       setTimeout(function () {
@@ -339,15 +260,6 @@ export default class EvoImpactGraph extends Component {
       graphLayout
         .on("tick", ticked)
         .alpha(3);
-
-      function isolate(force, filter) {
-        var initialize = force.initialize;
-        force.initialize = function () {
-          initialize.call(force, graph.nodes.filter(filter));
-        };
-        return force;
-      }
-
 
       function neigh(a, b) {
         return a == b || adjlist[a + "-" + b];
@@ -378,7 +290,6 @@ export default class EvoImpactGraph extends Component {
       const links = container.append("g").attr("class", "links")
         .selectAll("line")
         .data(graph.links)
-        // .data([])
         .enter()
         .append("line")
         .attr("stroke", function (d) {
@@ -389,7 +300,6 @@ export default class EvoImpactGraph extends Component {
       const nodes = container.append("g").attr("class", "nodes")
         .selectAll("g")
         .data(graph.nodes)
-        // .data(graph.roots.map(x => (graph.byId[x + " " + x])))
         .enter()
         .append("g")
         .style("transform-origin", "center");
@@ -397,169 +307,154 @@ export default class EvoImpactGraph extends Component {
       nodes.call(addContent);
 
       function addContent(/** @type {d3.Selection<SVGGElement, any, SVGGElement, any>} */node) {
-        if (true) {
-          const evo_nodes = node
-            .filter(d => {
-              if (typeof d.evolution !== "object") {
-                return false
-              }
-              return true
-            })
-          evo_nodes
-            .append("text")
-            .style("transform-origin", "center")
-            .style("font-weight", 900)
-            .style("font-size", "120px")
-            .style("font-family", "sans-serif")
-            .attr("fill", d => {
-              return "green"
-            })
-            .text(d => {
-              if (d.evolution.type === "Move Method") {
-                return "MM"
-              }
-              try {
-                return d.evolution.type.split(" ").map(x => x[0]).join("")
-              } catch (error) {
-                return "O"
-              }
-            })
-            .attr("dominant-baseline", "middle")
-            .attr("text-anchor", "middle")
-            .append("svg:title")
-            .text(function (d, i) {
-              return d.evolution.type
-            })
-          const other_nodes = node
-            .filter(d => {
-              if (typeof d.evolution !== "object") {
-                return true
-              }
+        const evo_nodes = node
+          .filter(d => {
+            if (typeof d.evolution !== "object") {
               return false
-            })
-          other_nodes
-            .append("circle")
-            // .attr("x", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
-            // .attr("y", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
-            .attr("r", function (d) { return d.missing ? 0 : NODE_SIZE / 2; })
-          evo_nodes
-            .append("text")
-            .style("transform-origin", "center")
-            .attr("dominant-baseline", "middle")
-            .style("font-weight", "bolder")
-            .attr("text-anchor", "middle")
-            .attr("fill", "black")
-            .text(d => {
-              if (typeof d.name === "string") {
-                return d.name
-              }
-              const value = d.value
-              if (typeof value === "string") {
-                return value
-              }
-              if (typeof value.name === "string") {
-                return value.name
-              }
-              if (typeof value.sig === "string") {
-                return value.sig
-              }
-              return value.sig.name
-            })
-            .append("svg:title")
-            .text(function (d, i) {
-              if (typeof d.signature === "string") {
-                return d.declType + '.' + d.signature
-              }
-              const value = d.value
-              if (typeof value === "string") {
-                return value
-              }
-              if (typeof value.signature === "string") {
-                return value.declType + '.' + value.signature
-              }
-              if (typeof value.sig === "string") {
-                return value.sig
-              }
-              return value.sig.declType + '.' + value.sig.signature
-            })
+            }
+            return true
+          })
+        evo_nodes
+          .append("text")
+          .style("transform-origin", "center")
+          .style("font-weight", 900)
+          .style("font-size", "120px")
+          .style("font-family", "sans-serif")
+          .attr("fill", d => {
+            return "green"
+          })
+          .text(d => {
+            if (d.evolution.type === "Move Method") {
+              return "MM"
+            }
+            try {
+              return d.evolution.type.split(" ").map(x => x[0]).join("")
+            } catch (error) {
+              return "O"
+            }
+          })
+          .attr("dominant-baseline", "middle")
+          .attr("text-anchor", "middle")
+          .append("svg:title")
+          .text(function (d, i) {
+            return d.evolution.type
+          })
+        const other_nodes = node
+          .filter(d => {
+            if (typeof d.evolution !== "object") {
+              return true
+            }
+            return false
+          })
+        other_nodes
+          .append("circle")
+          // .attr("x", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
+          // .attr("y", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
+          .attr("r", function (d) { return d.missing ? 0 : NODE_SIZE / 2; })
+        evo_nodes
+          .append("text")
+          .style("transform-origin", "center")
+          .attr("dominant-baseline", "middle")
+          .style("font-weight", "bolder")
+          .attr("text-anchor", "middle")
+          .attr("fill", "black")
+          .text(d => {
+            if (typeof d.name === "string") {
+              return d.name
+            }
+            const value = d.value
+            if (typeof value === "string") {
+              return value
+            }
+            if (typeof value.name === "string") {
+              return value.name
+            }
+            if (typeof value.sig === "string") {
+              return value.sig
+            }
+            return value.sig.name
+          })
+          .append("svg:title")
+          .text(function (d, i) {
+            if (typeof d.signature === "string") {
+              return d.declType + '.' + d.signature
+            }
+            const value = d.value
+            if (typeof value === "string") {
+              return value
+            }
+            if (typeof value.signature === "string") {
+              return value.declType + '.' + value.signature
+            }
+            if (typeof value.sig === "string") {
+              return value.sig
+            }
+            return value.sig.declType + '.' + value.sig.signature
+          })
 
-          other_nodes
-            .append("text")
-            .style("transform-origin", "center")
-            .attr("fill", d => {
-              if (d.isTest) {
-                return "red"
-              } else if (isTest(d)) {
-                return "orange"
-              } else if (d.isRoot) {
-                return "green"
-                // } else if (data.roots.includes(d.originalId)) {
-                //   return "green"
-                // } else if (d.depth === 1) {
-                //   return "green"
-                // } else if (d.root === d.originalId ) {
-                //   return "green"
-                // } else if (d.causes.length === 0) {
-                //   return "green"
-              }
-              return "white"
-            })
-            .text(d => {
-              if (typeof d.name === "string") {
-                return d.name
-              }
-              const value = d.value
-              if (typeof value === "string") {
-                return value
-              }
-              if (typeof value.name === "string") {
-                return value.name
-              }
-              if (typeof value.sig === "string") {
-                return value.sig
-              }
-              return value.sig.name
-            })
-            .attr("dominant-baseline", "middle")
-            .attr("text-anchor", "middle")
-            .attr("filter", "url(#background)")
-            .append("svg:title")
-            .text(function (d, i) {
-              if (typeof d.signature === "string") {
-                return d.declType + '.' + d.signature
-              }
-              const value = d.value
-              if (typeof value === "string") {
-                return value
-              }
-              if (typeof value.signature === "string") {
-                return value.declType + '.' + value.signature
-              }
-              if (typeof value.sig === "string") {
-                return value.sig
-              }
-              return value.sig.declType + '.' + value.sig.signature
-            });
-        } else {
-          node
-            .append("svg:image")
-            .attr("xlink:href", function (d) { return "https://p.bigstockphoto.com/GeFvQkBbSLaMdpKXF1Zv_bigstock-Aerial-View-Of-Blue-Lakes-And--227291596.jpg"/*DIR + d.img*/; })
-            .attr("x", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
-            .attr("y", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
-            .attr("height", function (d) { return NODE_SIZE * (d.scale || 1); })
-            .attr("width", function (d) { return NODE_SIZE * (d.scale || 1); })
-            .attr("transform", function (d) {
-              return `scale(${Math.random() > 0.5 ? -1 : 1},1)`;
-            });
-        }
+        other_nodes
+          .append("text")
+          .style("transform-origin", "center")
+          .attr("fill", d => {
+            if (d.isTest) {
+              return "red"
+            } else if (isTest(d)) {
+              return "orange"
+            } else if (d.isRoot) {
+              return "green"
+              // } else if (data.roots.includes(d.originalId)) {
+              //   return "green"
+              // } else if (d.depth === 1) {
+              //   return "green"
+              // } else if (d.root === d.originalId ) {
+              //   return "green"
+              // } else if (d.causes.length === 0) {
+              //   return "green"
+            }
+            return "white"
+          })
+          .text(d => {
+            if (typeof d.name === "string") {
+              return d.name
+            }
+            const value = d.value
+            if (typeof value === "string") {
+              return value
+            }
+            if (typeof value.name === "string") {
+              return value.name
+            }
+            if (typeof value.sig === "string") {
+              return value.sig
+            }
+            return value.sig.name
+          })
+          .attr("dominant-baseline", "middle")
+          .attr("text-anchor", "middle")
+          .attr("filter", "url(#background)")
+          .append("svg:title")
+          .text(function (d, i) {
+            if (typeof d.signature === "string") {
+              return d.declType + '.' + d.signature
+            }
+            const value = d.value
+            if (typeof value === "string") {
+              return value
+            }
+            if (typeof value.signature === "string") {
+              return value.declType + '.' + value.signature
+            }
+            if (typeof value.sig === "string") {
+              return value.sig
+            }
+            return value.sig.declType + '.' + value.sig.signature
+          });
       }
-      // .append("circle")
-      // .attr("r", 5)
-      // .attr("fill", function(d) { return color(d.group); })
 
-      // node.on("mouseover", focus).on("mouseout", unfocus);
+      // nodes.on("mouseover", focus).on("mouseout", unfocus);
 
 
+      // TODO put labels (like type of impact of any other relation)
       // const linksText =
       //   container.append("g").attr("class", "labels")
       //     .selectAll("text")
@@ -584,64 +479,6 @@ export default class EvoImpactGraph extends Component {
       );
 
       nodes.on("dblclick", dblclick)
-
-      // nodes.call(incremental)
-      // setTimeout(function () {
-      //   graphLayout.force("charge", d3.forceManyBody().distanceMax(1000)
-      //     // .strength(d => isTest(d) ? (d.isTest ? -800 : -800) : -2000))
-      //     .strength(d => d.isRoot ? -1000 : -500))
-      //   graphLayout.restart();
-      //   setTimeout(function () {
-      //   }, 10000)
-      // }, 10000)
-      const cont_nodes = container.select(".nodes")
-      const cont_links = container.select(".links")
-      /**
-       * 
-       * @param {d3.Selection} currents 
-       */
-      function incremental(currents) {
-        setTimeout(function () {
-          currents.each(function (x) {
-            x.effects2.forEach(eff => {
-              const e = eff.target
-              const n = addNode(e, x)
-              addLink(eff)
-              n.call(incremental)
-            })
-          })
-          // graphLayout.alpha(1);
-          // graphLayout.restart();
-        },
-          3
-        )
-      }
-      function addNode(x, y) {
-        return cont_nodes.append("g")
-          .datum(x)//{...x, "x":y.x,"y":y.y,"vx":y.vx,"vy":y.vy})
-          .style("transform-origin", "center")
-          .attr("transform", function (d) {
-            d.x = y.x
-            d.y = y.y
-            return "translate(" + fixna(d.x) + "," + fixna(d.y) + ")";
-          })
-          .call(addContent)
-          .call(
-            d3.drag()
-              .on("start", dragstarted)
-              .on("drag", dragged)
-              .on("end", dragended)
-          )
-          .on("dblclick", dblclick);
-      }
-      function addLink(x) {
-        return cont_links.append("line")
-          .datum(x)
-          .attr("stroke", function (d) {
-            return isTest(d.target) || isTest(d.source) ? "darkgray" : "black"
-          })
-          .attr("stroke-width", "5px");
-      }
 
       function findRoot(node) {
         // TODO do not rely on d3 to move in the graph
@@ -675,26 +512,8 @@ export default class EvoImpactGraph extends Component {
             end: d.value.position.end,
           })
         }
-        PubSub.publish("CHANGE_DIFF_CONTEXT", { node: d })//, root: d.causes.length === 0 ? d : getRoot(d.causes[0]) })
+        PubSub.publish("CHANGE_DIFF_CONTEXT", { node: d })
       }
-
-      // function getRoot(id) {
-      //   const d = graph.byId[id];
-      //   return d.causes.length === 0 ? d : getRoot(d.causes[0])
-      // }
-
-      // let labelNode = container.append("g").attr("class", "labelNodes")
-      //     .selectAll("text")
-      //     .data(label.nodes)
-      //     .enter()
-      //     .append("text")
-      //     .text(function(d, i) { return i % 2 == 0 ? "" : d.node.id; })
-      //     .style("fill", "#555")
-      //     .style("font-family", "Arial")
-      //     .style("font-size", 12)
-      //     .style("pointer-events", "none"); // to prevent mouseover/drag capture
-
-      // node.on("mouseover", focus).on("mouseout", unfocus);
 
       function ticked() {
         container.select(".nodes").selectAll("g") && container.selectAll(".nodes").selectAll("g").call(updateNode);
@@ -703,26 +522,6 @@ export default class EvoImpactGraph extends Component {
         if (!nodes && !links) {
           graphLayout.stop()
         }
-        // labelLayout.alphaTarget(0.3).restart();
-        // labelNode.each(function(d, i) {
-        //     if(i % 2 == 0) {
-        //         d.x = d.node.x;
-        //         d.y = d.node.y;
-        //     } else {
-        //         let b = this.getBBox();
-
-        //         let diffX = d.x - d.node.x;
-        //         let diffY = d.y - d.node.y;
-
-        //         let dist = Math.sqrt(diffX * diffX + diffY * diffY);
-
-        //         let shiftX = b.width * (diffX - dist) / (dist * 2);
-        //         shiftX = Math.max(-b.width, Math.min(0, shiftX));
-        //         let shiftY = 16;
-        //         this.setAttribute("transform", "translate(" + shiftX + "," + shiftY + ")");
-        //     }
-        // });
-        // labelNode.call(updateNode);
 
       }
 
@@ -734,18 +533,14 @@ export default class EvoImpactGraph extends Component {
       function focus(d) {
         const index = d3.select(d3.event.target).datum().index;
         nodes.style("opacity", function (o) {
-          return neigh(index, o.index) ? 1 : 0.1;
+          return neigh(index, o.index) ? 1 : 0.5;
         });
-        // labelNode.attr("display", function(o) {
-        //   return neigh(index, o.node.index) ? "block": "none";
-        // });
         links.style("opacity", function (o) {
-          return o.source.index == index || o.target.index == index ? 1 : 0.1;
+          return o.source.index == index || o.target.index == index ? 1 : 0.5;
         });
       }
 
       function unfocus() {
-        //    labelNode.attr("display", "block");
         nodes.style("opacity", 1);
         links.style("opacity", 1);
       }
@@ -810,17 +605,13 @@ export default class EvoImpactGraph extends Component {
   render() {
     return (
       <div style={{ height: "100%", width: "100%" }}>
-        {/* <div style={{ position: "fixed" }}>
-          <button ref="load">load</button>
-          <button ref="export">export</button>
-        </div> */}
         <svg ref="canvas" style={{ height: "100%", width: "100%" }}></svg>
       </div>);
   }
 
 }
 
-EvoImpactGraph.propTypes = {
+EvoImpactGraphReworked.propTypes = {
   graph: PropTypes.object,
   position: PropTypes.oneOfType([PropTypes.number, PropTypes.object]),
   uuid: PropTypes.string,

@@ -118,7 +118,7 @@ export default store => next => action => {
             actions.setDiffResult({ time: Date.now() - start, diff: json.diff, treeAdapter })
           );
           next(
-            actions.setEvoImpactResult({ time: Date.now() - start, impact: json.impact, treeAdapter })
+            actions.setEvoImpactResult({ time: Date.now() - start, impact: json.impact, treeAdapter, uuid:json.uuid })
           );
         },
         (/** @type Error */ error) => {

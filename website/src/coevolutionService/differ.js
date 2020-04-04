@@ -1,6 +1,7 @@
 import api from "./api";
 import { stringify } from "query-string";
 import defaultDifferInterface from "../parsers/utils/defaultDifferInterface";
+import { v1 as uuidv1 } from 'uuid';
 
 /**
  * 
@@ -26,6 +27,7 @@ export default async function RemoteDifferService(differ, query, options = {}) {
             json.diff = differ.processEvolutions(json.diff)
         if (differ.processImpacts)
         json.impact = differ.processImpacts(json.impact)
+        json.uuid = uuidv1()
         return json
     }
     switch (response.status) {

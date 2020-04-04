@@ -1,7 +1,7 @@
 import EvoImpactGraph from './EvoImpactGraph';
-import EvoImpactGraph2 from './EvoImpactGraph';
+import EvoImpactGraphReworked from './EvoImpactGraphReworked';
 
 export default [
+  EvoImpactGraphReworked,
   EvoImpactGraph,
-  EvoImpactGraph2,
 ];

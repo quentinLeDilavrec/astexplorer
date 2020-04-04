@@ -228,9 +228,10 @@ export function setDiffResult(result) {
  * @param {{time:number, impact:Object, treeAdapter:any}|{error:Error}} result 
  */
 export function setEvoImpactResult(result) {
-  const { time, impact, treeAdapter, error } = result
+  const { time, impact, treeAdapter, error, uuid } = result
   return {
     type: SET_EVO_IMPACT_RESULT, result: {
+      uuid,
       time: time || null,
       status: 'done',
       graph: impact || null,
