@@ -10,6 +10,8 @@ import React from 'react';
 import ReactDOM from "react-dom";
 import cx from 'classnames';
 import { cps } from 'redux-saga/effects';
+import Editor2 from './Editor2';
+import FallBackMenu from './FallBackMenu';
 
 const defaultPrettierOptions = {
   printWidth: 80,
@@ -20,64 +22,39 @@ const defaultPrettierOptions = {
   jsxBracketSameLine: false,
   parser: 'babylon',
 };
-function onResize(cm) {
-  var d = cm.display;
-  // Might be a text scaling operation, clear size caches.
-  d.cachedCharWidth = d.cachedTextHeight = d.cachedPaddingH = null;
-  d.scrollbarsClipped = false;
-  cm.setSize();
-}
 export default class DiffEditor extends React.Component {
 
   constructor(props) {
     super(props);
     this.state = {
-      value: props.value,
-      oldvalue: props.oldvalue,
+      right: props.right,
+      left: props.left,
       mode: props.mode,
     };
   }
-  // componentDidCatch() { }
+  // componentDidCatch(error, errorInfo) {
+  //   console.error(error, errorInfo)
+  // }
+
   // static getDerivedStateFromProps() {
 
   // }
 
-  //UNSAFE_componentWillReceiveProps(nextProps) {
-  //   if (nextProps.value !== this.state.value ||
-  //     nextProps.oldvalue !== this.state.oldvalue) {
-  //     this.setState(
-  //       {
-  //         value: nextProps.value,
-  //         oldvalue: nextProps.oldvalue,
-  //       },
-  //       () => {
-  //         // this.codeMirror.edit.setValue(nextProps.value); // TODO usefull?
-
-  //       },
-  //     );
-  //   }
-  //   if (nextProps.mode !== this.props.mode) {
-  //     this.codeMirror.setOption('mode', nextProps.mode);
-  //   }
-
-  //   if (nextProps.keyMap !== this.props.keyMap) {
-  //     this.codeMirror.setOption('keyMap', nextProps.keyMap);
-  //   }
-
-  //   this._setError(nextProps.error);
-  // }
-
-
-  shouldComponentUpdate() {
-    return false;
+  shouldComponentUpdate(nextProps, nextState) {
+    // return !!nextState.force;
+    return true
   }
 
   getValue() {
-    return this.codeMirror && (this.state.value = this.codeMirror.getValue());
+    return this.getRight();
   }
 
-  getOldValue() {
-    return this.codeMirror && (this.state.oldvalue = this.codeMirror.edit.state.diffViews[0].orig.getValue());
+  getRight() {
+    return this.codeMirror && (this.state.right = this.codeMirror.editor().getValue());
+  }
+
+  getLeft() {
+    return this.codeMirror && (this.state.left = this.codeMirror.leftOriginal().getValue());
   }
 
   /**
@@ -92,12 +69,15 @@ export default class DiffEditor extends React.Component {
     // editor.scrollTo((left + (right - left) / 2) - info.clientWidth / 2, (fromS.top + (toS.bottom - fromS.top) / 2) - info.clientHeight / 2);
     editor.scrollTo(fromS.left - info.clientWidth / 10, fromS.top - info.clientHeight / 10);
   }
+
   /**
    * 
    * @param {CodeMirror.Editor} editor 
    * @param {{start:number,end:number}[]} ranges 
+   * @param {{defaultMarking:string, kind: 'good'|'bad',noSscroll: boolean}} options 
    */
-  markIt(editor, ranges, defaultMarking, more) {
+  markIt(editor, ranges, options = {}) {
+    const { defaultMarking, kind } = options
     let first = Infinity;
     /** @type {CodeMirror.TextMarker[]} */
     const elements = []
@@ -113,8 +93,8 @@ export default class DiffEditor extends React.Component {
           className: ranges[i].marking || defaultMarking,
           title:
             // ranges[i].description || 
-            'TODO get node description'
-          // shared:true // useful ?
+            'TODO get node description',
+          shared: true,
         },
       )
       // m.on // TODO test also this
@@ -135,28 +115,44 @@ export default class DiffEditor extends React.Component {
       elements.forEach((x, i) => {
         const { from, to } = x.find()
         const classNames = {}
-        x.className.split(" ").forEach(x => classNames[x] = true)
+        if (Array.isArray(x.markers)) {
+          x.markers.forEach(x =>
+            x.className && x.className.split(" ").forEach(x => classNames[x] = classNames[x] || true)
+          )
+        } else {
+          x.className && x.className.split(" ").forEach(x => classNames[x] = true)
+        }
         Object.entries(marked).forEach(([k, v]) => classNames[v] = (k === clicked_state))
         x.clear()
         elements[i] = editor.markText(
           from, to,
           {
             className: cx(classNames),
+            shared: true,
           },
         )
       })
     }
+
     const onEnter = choice => () => {
       elements.forEach((x, i) => {
         const { from, to } = x.find()
         const classNames = {}
-        x.className.split(" ").forEach(x => classNames[x] = true)
+        debugger
+        if (Array.isArray(x.markers)) {
+          x.markers.forEach(x =>
+            x.className && x.className.split(" ").forEach(x => classNames[x] = classNames[x] || true)
+          )
+        } else {
+          x.className && x.className.split(" ").forEach(x => classNames[x] = true)
+        }
         Object.entries(marked).forEach(([k, v]) => classNames[v] = (clicked_state !== choice && k === choice))
         x.clear()
         elements[i] = editor.markText(
           from, to,
           {
             className: cx(classNames),
+            shared: true,
             // handleMouseEvents: true, // NEXT checkit
           },
         )
@@ -179,7 +175,13 @@ export default class DiffEditor extends React.Component {
           ranges: elements.map((x, i) => {
             const { from, to } = x.find()
             const classNames = {}
-            x.className.split(" ").forEach(x => classNames[x] = true)
+            if (Array.isArray(x.markers)) {
+              x.markers.forEach(x =>
+                x.className && x.className.split(" ").forEach(x => classNames[x] = classNames[x] || true) // it merge mark between instances
+              )
+            } else {
+              x.className && x.className.split(" ").forEach(x => classNames[x] = true)
+            }
             Object.entries(marked).forEach(([k, v]) => classNames[v] = (clicked_state !== choice && k === choice))
             debugger
             x.clear()
@@ -187,6 +189,7 @@ export default class DiffEditor extends React.Component {
               from, to,
               {
                 className: cx(classNames),
+                shared: true,
               },
             )
             return {
@@ -195,7 +198,12 @@ export default class DiffEditor extends React.Component {
             }
           })
         })
+
       clicked_state = clicked_state === choice ? undefined : choice
+      // TODO fix scrolling to elsewhere
+      // const tmp = editor.getViewportz()
+      editor.setCursor(editor.getCursor("anchor"), undefined, { scroll: false })
+      // editor.scrollIntoView(tmp);
     }
     const e = document.createElement('div')
     ReactDOM.render((<div>
@@ -212,30 +220,59 @@ export default class DiffEditor extends React.Component {
     // editor.addWidget(editor.posFromIndex(first),
     //   e, true)
     editor.addLineWidget(tmp.line, e, { above: true, showIfHidden: true, noHScroll: true, })
-    this.scrollTo(editor, editor.posFromIndex(first));
-    if (more === 'good') {
+    if (!options.noScroll) {
+      this.scrollTo(editor, editor.posFromIndex(first));
+    }
+    if (kind === 'good') {
       onClick('good')()
     }
   }
 
   setMirrorsValue({ before, after }) {
     // this.codeMirror.setShowDifferences(false); // TODO if a panel is empty fallback to standard editor or dissable diff
-    if (this.codeMirror && (this.state.value = after.doc) && this.codeMirror.editor() &&
-      (this.state.oldvalue = before.doc) && this.codeMirror.leftOriginal()) {
+    // if (!this.codeMirror || !this.codeMirror.editor() || !this.codeMirror.leftOriginal()) {
+    //   return;
+    // }
+    if ((typeof before.doc === 'string' || typeof after.doc === 'string')) {
       const r = {
-        before: this.codeMirror.leftOriginal().swapDoc(before.doc),
-        after: this.codeMirror.editor().swapDoc(after.doc),
+        before: typeof this.state.left === 'string' || !this.state.left.error && this.codeMirror ? this.codeMirror.leftOriginal().getDoc() : undefined,
+        after: typeof this.state.right === 'string' || !this.state.right.error && this.codeMirror ? this.codeMirror.editor().getDoc() : undefined,
       }
-      if (before.focus && after.focus) {
-        this.codeMirror // TODO unsync diff viewer
-      }
-      if (before.focus) {
-        this.markIt(this.codeMirror.leftOriginal(), before.ranges);
-      }
-      if (after.focus) {
-        this.markIt(this.codeMirror.editor(), after.ranges);
-      }
-      return r;
+      this.setState({
+        ...this.state,
+        force: true,
+        left: {
+          ...before,
+          doc: before.doc,
+          error: typeof before.doc === 'string' ? before.doc || true : undefined,
+        },
+        right: {
+          ...after,
+          doc: after.doc,
+          error: typeof after.doc === 'string' ? after.doc || true : undefined,
+        },
+      }, () => console.error(before.doc, after.doc))
+      return r
+    }
+    const r = {
+      before: this.codeMirror.leftOriginal().swapDoc(before.doc),
+      after: this.codeMirror.editor().swapDoc(after.doc),
+    }
+    if (before.focus && after.focus) {
+      this.codeMirror // TODO unsync diff viewer
+    }
+    if (before.focus) {
+      this.markIt(this.codeMirror.leftOriginal(), before.ranges);
+    }
+    if (after.focus) {
+      this.markIt(this.codeMirror.editor(), after.ranges);
+    }
+    return r;
+  }
+
+  componentDidUpdate() {
+    if (this.state.left.error && this.state.right.error) {
+      console.error(this.codeMirror, this.container_both_bugged)
     }
   }
 
@@ -275,11 +312,11 @@ export default class DiffEditor extends React.Component {
       this.container,
       {
         keyMap: this.props.keyMap,
-        value: this.state.value,
+        value: this.state.right,
         mode: this.props.mode,
         lineNumbers: this.props.lineNumbers,
         readOnly: this.props.readOnly,
-        origLeft: this.state.oldvalue,
+        origLeft: this.state.left,
         // orig: '0.0.0',
         highlightDifferences: true,
         // connect: "align",
@@ -287,6 +324,7 @@ export default class DiffEditor extends React.Component {
         allowEditingOriginals: true,
       },
     );
+
     const onClick = () => {
       /** @type {{start:number, end:number}[]} */
       const l = []
@@ -303,40 +341,62 @@ export default class DiffEditor extends React.Component {
       //   // DEFERED finish if ranges need to be joined
       // }
       debugger
-      this.markIt(this.codeMirror.editor(), l, '', 'good')
+      this.markIt(this.codeMirror.editor(), l, {
+        defaultMarking: '',
+        kind: 'good',
+        noScroll: true,
+      })
     }
     let panel
+    let fl_spacer_widget
     const f = () => {
+      window.azerty = this.codeMirror
       const e = document.createElement('span')
       // e.style.position="fixed"
       // e.style.display="block"
       // e.style.zIndex=101
-      ReactDOM.render((<div>
+      ReactDOM.render((<div style={{ height: '0px' }}>
         <button className="fa evo-button" onClick={onClick}
-          title="Set selection as co-evolution">Co-evolution</button>
+          title="Set selection as co-evolution"
+          style={{
+            position: 'absolute',
+            zIndex: 200,
+            backgroundColor: 'white',
+          }}>Co-evolution</button>
       </div>), e)
       // this.markIt(cm, s)
+      // NOTE wrong height bug fixed by replacing:
+      // wrap.style.height = info.setHeight;
+      // with: 
+      // wrap.style.removeProperty('height')
+
+      const s = document.createElement('div')
+      s.style.height = '18px'
+
+      fl_spacer_widget = this.codeMirror.editor()
+        .addLineWidget(0, s, {
+          above: true,
+          insertAt: 0,
+        })
       panel = this.codeMirror.editor()
-        .addPanel(e, {
+        .addPanel(e.children.item(0), {
           stable: true,
-          position: "bottom",
+          position: "top",
           replace: panel
           // stable: true,
         })
+      // TODO refresh to update diff curves
     }
     const g = () => {
       if (panel) {
         panel.clear()
         panel = undefined
       }
+      if (fl_spacer_widget) {
+        fl_spacer_widget.clear()
+        fl_spacer_widget = undefined
+      }
     }
-    // .setSize(undefined,"42px")
-    // this.codeMirror.editor().refresh();
-    // this.codeMirror.editor().setSize();
-    // onResize(this.codeMirror.editor())
-    // this.codeMirror.editor().setSize(undefined, "82%")
-    // this.codeMirror.editor().wrapper().style.height="83%"
-    // this.codeMirror.editor().getWrapperElement().style.height="83%"
     if (false) {
       const e2 = document.createElement('span')
       // e2.style.position="fixed"
@@ -351,15 +411,15 @@ export default class DiffEditor extends React.Component {
           stable: true,
         })
     }
-    // this.codeMirror.leftOriginal().refresh();
-    // this.codeMirror.leftOriginal().setSize(undefined, "84%")
-    // this.codeMirror.leftOriginal().getWrapperElement().style.height="85%"
+  
     let selecting = false
     this.codeMirror.editor().on('cursorActivity', (cm) => {
       const tmp = cm.getSelection()
       if (tmp.length === 0) {
+        const tmp2 = cm.getScrollInfo()
         selecting = false
         g()
+        cm.scrollTo(tmp2.left, tmp2.top)
       }
     })
     this.codeMirror.editor()
@@ -416,9 +476,6 @@ export default class DiffEditor extends React.Component {
           this.codeMirror.editor().setSize();
           this.codeMirror.leftOriginal().refresh();
           this.codeMirror.leftOriginal().setSize();
-
-          // this.codeMirror.left.forceUpdate()(this.state.mode)
-          // this.codeMirror.right.forceUpdate()(this.state.mode)
         }
       }),
     );
@@ -451,14 +508,20 @@ export default class DiffEditor extends React.Component {
             this._mark = this.codeMirror.edit.markText(
               startRight,
               endRight,
-              { className: 'marked' },
+              {
+                className: 'marked',
+                shared: true,
+              },
             );
           }
           if (node.side === "left") {
             this._mark_orig = this.codeMirror.edit.state.diffViews[0].orig.markText(
               startLeft,
               endLeft,
-              { className: 'marked' },
+              {
+                className: 'marked',
+                shared: true,
+              },
             );
           }
         }),
@@ -494,7 +557,7 @@ export default class DiffEditor extends React.Component {
     this._markerRange = null;
     this._mark = null;
     let container = this.container;
-    container.removeChild(container.children[0]);
+    container && container.children && container.children[0] && container.removeChild(container.children[0]);
     this.codeMirror = null;
   }
 
@@ -534,7 +597,7 @@ export default class DiffEditor extends React.Component {
     };
     this.setState(
       {
-        value: args.value,
+        right: args.value,
       },
       () => {
         this.props.onContentChange(args)
@@ -545,13 +608,13 @@ export default class DiffEditor extends React.Component {
   _onContentChangeLeft() {
     const docLeft = this.codeMirror.edit.state.diffViews[0].orig.getDoc();
     const args = {
-      oldvalue: docLeft.getValue(),
+      value: docLeft.getValue(),
       cursor: docLeft.indexFromPos(docLeft.getCursor()),
       side: "right",
     };
     this.setState(
       {
-        oldvalue: args.oldvalue,
+        left: args.value,
       },
       () => {
         this.props.onContentChange(args)
@@ -575,14 +638,80 @@ export default class DiffEditor extends React.Component {
   }
 
   render() {
-    return (
-      <div className="editor" ref={c => this.container = c} />
-    );
+
+    if (this.state.left.error && this.state.right.error) {
+      debugger
+      return (
+        <div key="both-error" className="editor" ref={c => this.container_both_bugged = c} >
+          <div key="both-error0" className="CodeMirror-merge CodeMirror-merge-2pane">
+            <div key="both-error1" className="CodeMirror-merge-pane CodeMirror-merge-left error-editor">
+              <FallBackMenu error={this.state.left.error} />
+            </div>
+            <div key="both-error2" className="CodeMirror-merge-gap" />
+            <div key="both-error3" className="CodeMirror-merge-pane CodeMirror-merge-editor CodeMirror-merge-pane-rightmost error-editor">
+              <FallBackMenu error={this.state.right.error} />
+            </div>
+          </div>
+        </div>
+      );
+    } else if (this.state.left.error) {
+      debugger
+      return (
+        <div key="left-error" className="editor" ref={c => this.container_both_bugged = c} >
+          <div key="left-error0" className="CodeMirror-merge CodeMirror-merge-2pane">
+            <div key="left-error1" className="CodeMirror-merge-pane CodeMirror-merge-left error-editor" style={{ width: "25%" }}>
+              <FallBackMenu error={this.state.left.error} />
+            </div>
+            <div key="left-error2" className="CodeMirror-merge-gap" style={{ width: "3%" }} />
+            <div key="left-error3" className="CodeMirror-merge-pane CodeMirror-merge-editor CodeMirror-merge-pane-rightmost" style={{ width: "72%" }}>
+              <Editor2 key="left-error4"
+                value={"-Getting content..."}
+                mode={this.props.mode}
+                ref={(y) => {
+                  if (y) {
+                    y.setMirrorValue(this.state.right)
+                  }
+                  return y
+                }} />
+            </div>
+          </div>
+        </div>
+      );
+    } else if (this.state.right.error) {
+      debugger
+      return (
+        <div key="right-error" className="editor" ref={c => this.container_both_bugged = c} >
+          <div key="right-error0" className="CodeMirror-merge CodeMirror-merge-2pane">
+            <div key="right-error1" className="CodeMirror-merge-pane CodeMirror-merge-left" style={{ width: "72%" }}>
+              <Editor2
+                key="right-error4"
+                value={"-Getting content..."}
+                mode={this.props.mode}
+                ref={(y) => {
+                  if (y) {
+                    y.setMirrorValue(this.state.left)
+                  }
+                  return y
+                }} />
+            </div>
+            <div key="right-error2" className="CodeMirror-merge-gap" style={{ width: "3%" }} />
+            <div key="right-error3" className="CodeMirror-merge-pane CodeMirror-merge-editor CodeMirror-merge-pane-rightmost error-editor" style={{ width: "25%" }}>
+              <FallBackMenu error={this.state.right.error} />
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div key="both-ok" className="editor" ref={c => this.container = c} />
+      );
+    }
   }
 }
 
 DiffEditor.propTypes = {
-  value: PropTypes.string,
+  right: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+  left: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   highlight: PropTypes.bool,
   lineNumbers: PropTypes.bool,
   readOnly: PropTypes.bool,
@@ -596,7 +725,8 @@ DiffEditor.propTypes = {
 };
 
 DiffEditor.defaultProps = {
-  value: '',
+  right: '',
+  left: '',
   highlight: true,
   lineNumbers: true,
   readOnly: false,
@@ -607,43 +737,3 @@ DiffEditor.defaultProps = {
 };
 
 
-
-
-// function toggleDifferences() {
-//   dv.setShowDifferences(highlight = !highlight);
-// }
-
-// window.onload = function() {
-//   value = document.documentElement.innerHTML;
-//   orig1 = "<!doctype html>\n\n" + value.replace(/\.\.\//g, "codemirror/").replace("yellow", "orange");
-//   orig2 = value.replace(/\u003cscript/g, "\u003cscript type=text/javascript ")
-//     .replace("white", "purple;\n      font: comic sans;\n      text-decoration: underline;\n      height: 15em");
-//   initUI();
-//   let d = document.createElement("div"); d.style.cssText = "width: 50px; margin: 7px; height: 14px"; dv.edit.addLineWidget(57, d)
-// };
-
-// function mergeViewHeight(mergeView) {
-//   function editorHeight(editor) {
-//     if (!editor) return 0;
-//     return editor.getScrollInfo().height;
-//   }
-//   return Math.max(editorHeight(mergeView.leftOriginal()),
-//                   editorHeight(mergeView.edit),
-//                   editorHeight(mergeView.rightOriginal()));
-// }
-
-// function resize(mergeView) {
-//   var height = mergeViewHeight(mergeView);
-//   for(;;) {
-//     if (mergeView.leftOriginal())
-//       mergeView.leftOriginal().setSize(null, height);
-//     mergeView.edit.setSize(null, height);
-//     if (mergeView.rightOriginal())
-//       mergeView.rightOriginal().setSize(null, height);
-
-//     var newHeight = mergeViewHeight(mergeView);
-//     if (newHeight >= height) break;
-//     else height = newHeight;
-//   }
-//   mergeView.wrap.style.height = height + "px";
-// }

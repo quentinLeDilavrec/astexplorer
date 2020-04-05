@@ -227,6 +227,7 @@ export default class Editor2 extends React.Component {
 
 
   setMirrorValue(param) {
+    param.doc = typeof param.doc === 'string' ? CodeMirror.Doc(param.doc, this.state.mode) : param.doc
     const { doc: value, ranges } = param
     if (this.codeMirror && (this.state.value = value)) {// TODO should not set state manually
       const r = this.codeMirror.swapDoc(value)
@@ -306,7 +307,7 @@ export default class Editor2 extends React.Component {
 }
 
 Editor2.propTypes = {
-  value: PropTypes.string,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   highlight: PropTypes.bool,
   lineNumbers: PropTypes.bool,
   readOnly: PropTypes.bool,

@@ -7,6 +7,77 @@
 @import "../fontcustom/fontcustom.css";
 
 
+/* div.CodeMirror-merge-pane > div > div > div.CodeMirror-scroll > div.CodeMirror-sizer > div > div.CodeMirror-lines {
+  background-color: red;
+
+} */
+
+.files {
+  background: rgba(255, 255, 255, 0.705);
+  width: max-content;
+  margin: .1em;
+  padding: .1em;
+  padding-right: .3em;
+}
+
+.files ul, .files li {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.files ul ul {
+  border-left: 0.1em dotted hsl(0, 0%, 33%);
+}
+.files li {
+  display: block;
+  position: relative;
+  margin-left: 20px;
+}
+.files li:before {
+  margin-left: -15px;
+  position: absolute;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+.files li > :first-child {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.content-block {
+  background: rgba(255, 255, 255, 0.671);
+  width:fit-content;
+  height: fit-content;
+  margin: .3em;
+  padding: .1em;
+  border: 0.1em solid white;
+  border-radius: 0.2em;
+}
+
+
+.error-editor {
+  overflow: auto;
+  background:
+  /* linear-gradient(to bottom left,transparent 40%,red 40.99%,red 60%,transparent 60.99%) top   /100% 100%,
+  linear-gradient(to top    left,transparent 40%,red 40.99%,red 60%,transparent 60.99%) bottom/100% 100%, */
+  linear-gradient(-45deg ,transparent 40%,red 40.99%,red 60%,transparent 60.99%),
+  linear-gradient(45deg ,transparent 40%,red 40.99%,red 60%,transparent 60.99%),
+  linear-gradient(rgba(219, 122, 141, 0.233),rgba(219, 122, 141, 0.233));
+  background-repeat:no-repeat;
+  /* -webkit-clip-path:polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%);
+  clip-path:polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%); */
+
+}
+
+.error-editor > div > :first-child {
+  background: rgba(255, 255, 255, 0.575);
+  height:auto;
+}
+
+.fa-warning:before{
+  color:red
+}
+
 .evo-button {
   margin: 0;
   padding: 1px;
@@ -21,6 +92,10 @@
 .evo-button:hover,
 .evo-button.clicked {
   opacity: 1;
+}
+
+.CodeMirror-merge-left > .editor {
+  position: relative;
 }
 
 .CodeMirror-merge, .CodeMirror-merge > .CodeMirror {

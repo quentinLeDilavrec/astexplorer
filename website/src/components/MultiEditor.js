@@ -22,189 +22,9 @@ const defaultPrettierOptions = {
   parser: 'babylon',
 };
 
-// const REPO="https://github.com/INRIA/spoon.git",
-// // COMMITIDBEFORE="4b42324566bdd0da145a647d136a2f555c533978",COMMITIDAFTER="904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b"
-// COMMITIDBEFORE="ad00519ae675f5ead3b4d4d77465efdb30e36915",COMMITIDAFTER="cea84c4a25b393984437f1174aceaad5925c187d"
-// // const REPO = "https://github.com/google/closure-compiler.git"
-// // const COMMITIDBEFORE = "81968c426bc06dbe26ecdde1aee90604f26b6c9e"
-// // const COMMITIDAFTER = "5a853a60f93e09c446d458673bc7a2f6bb26742c"
-// const REPO = "https://github.com/Graylog2/graylog2-server.git",
-//   COMMITIDBEFORE = "904f8e2a49f8ded1b16ab52e37588592e02da71c",
-//   COMMITIDAFTER = "767171c90110c4c5781e8f6d19ece1fba0d492e9"
-
-// repo: "https://github.com/google/closure-compiler.git",
-// commitIdBefore: "81968c426bc06dbe26ecdde1aee90604f26b6c9e",
-// commitIdAfter: "5a853a60f93e09c446d458673bc7a2f6bb26742c"
-// repo: "https://github.com/INRIA/spoon.git",
-// commitIdBefore: "4b42324566bdd0da145a647d136a2f555c533978",
-// commitIdAfter: "904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b"
-// // commitIdBefore: "ad00519ae675f5ead3b4d4d77465efdb30e36915",
-// // commitIdAfter: "cea84c4a25b393984437f1174aceaad5925c187d"
-
-// const REPO = "https://github.com/Graylog2/graylog2-server.git",
-//   COMMITIDBEFORE = "904f8e2a49f8ded1b16ab52e37588592e02da71c",
-//   COMMITIDAFTER = "767171c90110c4c5781e8f6d19ece1fba0d492e9"
-
-// import { MonacoDiffEditor } from 'react-monaco-editor';
-
-// export default class DiffEditor extends React.Component {
-
-//   constructor(props) {
-//     super(props);
-//     this.state = {
-//       value: props.value,
-//     };
-//   }
-
-//   render() {
-//     const code1 = "// your original code...";
-//     const code2 = "// a different version...\nlet a = 2;";
-//     const options = {
-//       //renderSideBySide: false
-//     };
-//     return (
-//       <MonacoDiffEditor
-//         // width="100%"
-//         // height="100%"
-//         // language="javascript"
-//         // theme="vs-dark"
-//         original={code1}
-//         value={code2}
-//         options={options}
-//       />
-//     );
-//   }
-// }
-
-// const diffDocuments = {
-//   "aaaaa": {
-//     "A.java": "class A {\nvoid f(){}\n}",
-//     "B.java": "class B {}",
-//     "Test.java": "class Test {\n@Test\nvoid test() {\nnew A().f();\n} }"
-//   },
-//   "bbbbb": {
-//     "A.java": "class A {}",
-//     "B.java": "class B {\nvoid f(){}\n}",
-//     "Test.java": "class Test {\n@Test\nvoid test() {\nnew B().f();\n} }"
-//   }
-// }
-// function instanciateDocs(diffDocuments, mode) {
-//   const r = {}
-//   for (const key in diffDocuments) {
-//     if (diffDocuments.hasOwnProperty(key)) {
-//       const commit = diffDocuments[key];
-//       const tmp = {}
-//       for (const key in commit) {
-//         if (commit.hasOwnProperty(key)) {
-//           const file = commit[key];
-//           tmp[key] = CodeMirror.Doc(file, mode)
-//         }
-//       }
-//       r[commit] = tmp
-//     }
-//   }
-//   return r
-// }
-
-// function query(commit, file) {
-//   return diffDocuments[commit][file]
-// }
-
-// function evo2files(evo) {
-//   return {
-//     "aaaaa": [
-//       "A.java",
-//       "B.java",
-//       "Test.java"
-//     ],
-//     "bbbbb": [
-//       "A.java",
-//       "B.java",
-//       "Test.java"
-//     ]
-//   }
-// }
-
-// const files = evo2files(this.state.value);
-
-// for (const key in files) {
-//   if (files.hasOwnProperty(key)) {
-//     const commit = files[key];
-//     const tmp = {}
-//     for (const key in commit) {
-//       if (commit.hasOwnProperty(key)) {
-//         const file = commit[key];
-//         tmp[key] = CodeMirror.Doc(file, mode)
-//       }
-//     }
-//     r[commit] = tmp
-//   }
-// }
-// data = {
-//   type: "move",
-//   what: "method",
-//   from: { commit:"aaaaa", file: "A.java", start: 1, end: 2 },
-//   to: { commit:"bbbbb", file: "B.java", start: 1, end: 2 },
-//   impacts: [
-//     { file: "Test.java", start: 10, end: 12 }
-//   ]
-// }
-
 const ORIENTATION = {
   horizontal: "horizontal",
   vertical: "vertical",
-}
-
-const LAYOUT = {
-  orientation: ORIENTATION.vertical,
-  content: [
-    {
-      orientation: ORIENTATION.horizontal,
-      content: [
-        {
-          before: { repo: "repo", commitId: "aaa", path: "A.java", content: "class A {\nvoid f(){}\n}" },
-          after: { repo: "repo", commitId: "bbb", path: "A.java", content: "class A {}" },
-        },
-        {
-          before: { repo: "repo", commitId: "aaa", path: "B.java", content: "class B {}" },
-          after: { repo: "repo", commitId: "bbb", path: "B.java", content: "class B {\nvoid f(){}\n}" },
-        }
-      ]
-    },
-    {
-      orientation: ORIENTATION.horizontal,
-      content: [
-        {
-          before: { repo: "repo", commitId: "aaa", path: "Test.java", content: "class Test {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-          after: { repo: "repo", commitId: "bbb", path: "Test.java", content: "class Test {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-        },
-        {
-          before: { repo: "repo", commitId: "aaa", path: "Test1.java", content: "class Test1 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-          after: { repo: "repo", commitId: "bbb", path: "Test1.java", content: "class Test1 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-        },
-        {
-          before: { repo: "repo", commitId: "aaa", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-          after: { repo: "repo", commitId: "bbb", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-        },
-        {
-          before: { repo: "repo", commitId: "aaa", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-          after: { repo: "repo", commitId: "bbb", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-        },
-        {
-          before: { repo: "repo", commitId: "aaa", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-          after: { repo: "repo", commitId: "bbb", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-        },
-        {
-          before: { repo: "repo", commitId: "aaa", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-          after: { repo: "repo", commitId: "bbb", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-        },
-        {
-          before: { repo: "repo", commitId: "aaa", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-          after: { repo: "repo", commitId: "bbb", path: "Test2.java", content: "class Test2 {\n@Test\nvoid test() {\nnew A().f();\n} }" },
-        }
-      ]
-    }
-  ]
 }
 
 /**
@@ -286,8 +106,8 @@ function graphNodesToSecenario(graphNodes, repo, commitIdBefore, commitIdAfter) 
   const root = findRoot(node)[0] // TODO generalize all get(0), a move is a 1 to 1 ref but an extract is apriori a n to n.
   // TODO change from and to semantic to something like removed, inserted, considered. As left side of a diff is the "from" and rigth is the "to" 
   if (root.evolution.type === "Move Method") {
-  return {
-    type: 'move', what: 'method',
+    return {
+      type: 'move', what: 'method',
       from: node2diff(root.evolution.before[0], repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from'),
       to: node2diff(root.evolution.after[0], repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to'),
       impacts:
@@ -300,7 +120,7 @@ function graphNodesToSecenario(graphNodes, repo, commitIdBefore, commitIdAfter) 
         node2diff(x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from')),
       after: root.evolution.after.slice(0, 6).map(x =>
         node2diff(x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to')),
-    impacts:
+      impacts:
         impactedTests.slice(0, 6).map(x => node2diff(x.value.position, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
     }
   }
@@ -350,9 +170,6 @@ function scenario2Layout(scenario) {
   }
 }
 
-// const SERVICE_URL = 'http://131.254.17.96:8095/data/default';
-const USE_FETCH = true
-
 const fileHandler = {
   id: 'default',
   processFile(json) {
@@ -364,67 +181,23 @@ const fileHandler = {
   }
 }
 
-async function getContent(repo, commitId, path, mode) {
-  if (USE_FETCH) {
-    return RemoteFileService(fileHandler, {
-      repo,
-      commitId,
-      path,
-    })
-      .then(x => {
-        return CodeMirror.Doc(x.content, mode)
+async function getContent(repo, commitId, path, mode, docs) {
+    const k = repo + commitId + path
+    
+    return ( (docs[k] && docs[k].linkedDoc({mode})) ||
+      RemoteFileService(fileHandler, {
+        repo,
+        commitId,
+        path,
       })
-      .catch(x => {
-        // console.error(x)
-        return CodeMirror.Doc(x.name + ': ' + x.message)
-      });
-  } else {
-  console.log(4982, arguments)
-  const xhr = new XMLHttpRequest();
-  xhr.open("PUT", SERVICE_URL);
-  xhr.withCredentials = true;
-    // xhr.setRequestHeader('Access-Control-Allow-Origin', 'http://131.254.17.96:8087');
-    xhr.setRequestHeader('Access-Control-Allow-Origin', 'http://176.180.199.146:50001');
-    // xhr.setRequestHeader('Access-Control-Allow-Credentials', 'true');
-  // xhr.setRequestHeader('Content-Type', 'text/plain');
-  // xhr.setRequestHeader('Content-Type', "application/json; charset=utf-8");
-  xhr.setRequestHeader('Content-Type', "application/json");
-    xhr.onprogress = (() => console.log("data handling in progress"))
-    xhr.onloadstart = (() => console.log("data handling load started"))
-  return new Promise(
-    (resolve, reject) => {
-      xhr.onload = (e) => {
-        if (xhr.responseText === "<html><body><h2>404 Not found</h2></body></html>") {
-          // reject(xhr.response)
-          console.error(xhr.response)
-          return
-        }
-        const r = JSON.parse(xhr.response)
-        if (r.error) {
-          reject(r.error)
-        } else {
-          resolve(r);
-        }
-      }
-      xhr.onerror = (e) => {
-        reject("error: can't get content from server")
-      }
-      // xhr.send(btoa(before) + '\n' + btoa(after));
-      // xhr.send(JSON.stringify({before:btoa(before), after:btoa(after)}));
-      xhr.send(JSON.stringify({
-        repo: repo,
-        commitId: commitId,
-        path: path
-      }));
-    })
-    .then(x => {
-      return CodeMirror.Doc(x.content, mode)
-    })
-    .catch(x => {
-      console.error(x)
-      return CodeMirror.Doc(x)
-    });
-}
+        .then(x => {
+          return docs[k] = (docs[k] && docs[k].linkedDoc({mode})) || CodeMirror.Doc(x.content, mode)
+        })
+        .catch(x => {
+          // console.error(x)
+          return x.name + ': ' + x.message
+        })
+    );
 }
 
 function resize() {
@@ -444,7 +217,7 @@ export default class MultiEditor extends React.Component {
     // this.handleScenarioChange = this.handleScenarioChange.bind(this);
   }
 
-  _layoutRenderer(x, key) {
+  _layoutRenderer(x, docs = {}, key="") {
     console.log(3, this)
     if (x.orientation === ORIENTATION.vertical) {
       return (
@@ -452,7 +225,7 @@ export default class MultiEditor extends React.Component {
           key={key}
           className="splitpane"
           onResize={resize}>
-          {x.content.map((x, i) => this._layoutRenderer(x, i))}
+          {x.content.map((x, i) => this._layoutRenderer(x, docs, key+'.'+i))}
         </SplitPane>
       );
     } else if (x.orientation === ORIENTATION.horizontal) {
@@ -462,7 +235,7 @@ export default class MultiEditor extends React.Component {
           className="splitpane"
           vertical={true}
           onResize={resize}>
-          {x.content.map((x, i) => this._layoutRenderer(x, i))}
+          {x.content.map((x, i) => this._layoutRenderer(x, docs, key+'.'+i))}
         </SplitPane>);
       } else {
         return (<SplitPane
@@ -473,11 +246,11 @@ export default class MultiEditor extends React.Component {
           {this._layoutRenderer({
             orientation: x.orientation,
             content: x.content.slice(0, x.content.length / 2)
-          })}
+          }, docs)}
           {this._layoutRenderer({
             orientation: x.orientation,
             content: x.content.slice(x.content.length / 2)
-          })}
+          }, docs)}
         </SplitPane>);
       }
     } else if (typeof x.before === 'object' && typeof x.after === 'object') {
@@ -493,8 +266,8 @@ export default class MultiEditor extends React.Component {
           if (y) {
             // TODO get back old doc and memoize them (with React? )
             y.setMirrorsValue({
-              before: { ...x.before, doc: await getContent(x.before.repo, x.before.commitId, x.before.path, this.props.mode) },
-              after: { ...x.after, doc: await getContent(x.after.repo, x.after.commitId, x.after.path, this.props.mode) }
+              before: { ...x.before, doc: await getContent(x.before.repo, x.before.commitId, x.before.path, this.props.mode, docs) },
+              after: { ...x.after, doc: await getContent(x.after.repo, x.after.commitId, x.after.path, this.props.mode, docs) }
             })
           }
           return y
@@ -506,7 +279,7 @@ export default class MultiEditor extends React.Component {
         value={"Getting content..."}
         ref={async (y) => {
           if (y) {
-            const content = await getContent(x.repo, x.commitId, x.path, this.props.mode)
+            const content = await getContent(x.repo, x.commitId, x.path, this.props.mode, docs)
             y.setMirrorValue({
               ...x,
               doc: content,
@@ -518,35 +291,39 @@ export default class MultiEditor extends React.Component {
     }
   }
 
-  UNSAFE_componentWillReceiveProps(nextProps) {
-    if (nextProps.value !== this.state.value ||
-      nextProps.oldvalue !== this.state.oldvalue) {
-      this.setState(
-        {
-          value: nextProps.value,
-          oldvalue: nextProps.oldvalue,
-        },
-        () => {
-          // this.codeMirror.edit.setValue(nextProps.value); // TODO usefull?
+  componentDidUpdate(prevProps,prevState) {
+    const nextProps = this.props
+    const nextstate = this.state
+    debugger
+    // if (nextProps.value !== prevState.value ||
+    //   nextProps.oldvalue !== prevState.oldvalue) {
+    //   this.setState(
+    //     {
+    //       right: nextProps.right,
+    //       left: nextProps.left,
+    //     },
+    //     () => {
+    //       // this.codeMirror.edit.setValue(nextProps.value); // TODO usefull?
 
-        },
-      );
-    }
-    if (nextProps.mode !== this.props.mode) {
-      this.codeMirror.setOption('mode', nextProps.mode);
-    }
+    //     },
+    //   );
+    // }
+    // if (nextProps.mode !== prevProps.mode) {
+    //   this.codeMirror.setOption('mode', nextProps.mode);
+    // }
 
-    if (nextProps.keyMap !== this.props.keyMap) {
-      this.codeMirror.setOption('keyMap', nextProps.keyMap);
-    }
+    // if (nextProps.keyMap !== prevProps.keyMap) {
+    //   this.codeMirror.setOption('keyMap', nextProps.keyMap);
+    // }
 
-    this._setError(nextProps.error);
+    // this._setError(nextProps.error);
   }
 
 
-  // shouldComponentUpdate() {
-  //   return false;
-  // }
+  shouldComponentUpdate(nextProps, nextState) { // TODO update insteadof using publish subscribe
+    debugger
+    return !!nextState.forced && this.state !== nextState;
+  }
 
   getValue() {
     return this.codeMirror && (this.state.value = this.codeMirror.getValue());
@@ -637,7 +414,11 @@ export default class MultiEditor extends React.Component {
 
         this.setState({
           ...this.state,
-          value: x,
+          value: {
+            ...this.state.value,
+            ...x,
+          },
+          forced:true
         })
       }),
     );
