@@ -68,7 +68,7 @@ export default class EvolveButton extends React.Component {
           type="button"
           title="Evolve Settings"
           style={{ minWidth: 0 }}
-          disabled={!this.props.differ.hasSettings()}
+          disabled={!this.props.differ || !this.props.differ.hasSettings()}
           onClick={this.props.onDifferSettingsButtonClick}>
           <i className="fa fa-cog fa-fw" />
         </button>
