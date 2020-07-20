@@ -38,16 +38,35 @@ function node2file(nodes, repo, commitId, marking) {
   if (typeof nodes.file === "string") {
     nodes = [nodes]
   }
+  if (typeof nodes.filePath === "string") {
+    nodes = [nodes]
+  }
   return {
-    repo: repo, commitId: commitId, path: nodes[0].file,
+    repo: repo, commitId: commitId, path: nodes[0].file || nodes[0].filePath,
     ranges: nodes.map(x => ({ start: x.start, end: x.end, marking: marking })),
   }
 }
 
-function node2diff(nodes, repo, commitIdBefore, commitIdAfter, focus, marking) {
+function heuristic(node) {
+  if (node.effects2===undefined) {
+    return node
+  }
+  for (const effect of node.effects2) {
+    if (effect.content && effect.content.type === "expand to executable") {
+      if (effect.target.evolution && effect.target.evolution.type === "Move Method") {
+        for (const range of effect.target.evolution.after) {
+          return {...node,file:range.file||range.filePath}
+        }
+      }
+    }
+  }
+  return node
+}
+
+function node2diff(nodesBefore, nodesAfter, repo, commitIdBefore, commitIdAfter, focus, marking) {
   const r = {
-    before: node2file(nodes, repo, commitIdBefore, marking),
-    after: node2file(nodes, repo, commitIdAfter, marking)
+    before: node2file(nodesBefore, repo, commitIdBefore, marking),
+    after: node2file(nodesAfter?(typeof nodesAfter.map==="function"?nodesAfter:[nodesAfter]).map(heuristic):nodesBefore, repo, commitIdAfter, marking)
   }
   if (!focus) {
     r.before.focus = true
@@ -59,8 +78,8 @@ function node2diff(nodes, repo, commitIdBefore, commitIdAfter, focus, marking) {
 
 function isTest(d) {
   return d.isTest || (d.value
-    && d.value.position
-    && d.value.position.isTest)
+    && ((d.value.isTest) || (d.value.position
+      && d.value.position.isTest)))
 }
 
 function findimpactedTests(node, max_depth = Infinity) {
@@ -108,20 +127,20 @@ function graphNodesToSecenario(graphNodes, repo, commitIdBefore, commitIdAfter) 
   if (root.evolution.type === "Move Method") {
     return {
       type: 'move', what: 'method',
-      from: node2diff(root.evolution.before[0], repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from'),
-      to: node2diff(root.evolution.after[0], repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to'),
+      from: node2diff(root.evolution.before[0],undefined, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from'),
+      to: node2diff(root.evolution.after[0],undefined, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to'),
       impacts:
-        impactedTests.slice(0, 3).map(x => node2diff(x.value.position, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
+        impactedTests.slice(0, 3).map(x => node2diff(x.value.position || x.value, x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
     }
   } else {
     return {
       type: UNSPEC_TYPE, what: UNSPEC_WHAT,
       before: root.evolution.before.slice(0, 6).map(x =>
-        node2diff(x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from')),
+        node2diff(x, x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from')),
       after: root.evolution.after.slice(0, 6).map(x =>
-        node2diff(x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to')),
+        node2diff(x, x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to')),
       impacts:
-        impactedTests.slice(0, 6).map(x => node2diff(x.value.position, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
+        impactedTests.slice(0, 6).map(x => node2diff(x.value.position || x.value, x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
     }
   }
 }
@@ -182,22 +201,22 @@ const fileHandler = {
 }
 
 async function getContent(repo, commitId, path, mode, docs) {
-    const k = repo + commitId + path
-    
-    return ( (docs[k] && docs[k].linkedDoc({mode})) ||
-      RemoteFileService(fileHandler, {
-        repo,
-        commitId,
-        path,
+  const k = repo + commitId + path
+
+  return ((docs[k] && docs[k].linkedDoc({ mode })) ||
+    RemoteFileService(fileHandler, {
+      repo,
+      commitId,
+      path,
+    })
+      .then(x => {
+        return docs[k] = (docs[k] && docs[k].linkedDoc({ mode })) || CodeMirror.Doc(x.content, mode)
       })
-        .then(x => {
-          return docs[k] = (docs[k] && docs[k].linkedDoc({mode})) || CodeMirror.Doc(x.content, mode)
-        })
-        .catch(x => {
-          // console.error(x)
-          return x.name + ': ' + x.message
-        })
-    );
+      .catch(x => {
+        // console.error(x)
+        return x.name + ': ' + x.message
+      })
+  );
 }
 
 function resize() {
@@ -217,7 +236,7 @@ export default class MultiEditor extends React.Component {
     // this.handleScenarioChange = this.handleScenarioChange.bind(this);
   }
 
-  _layoutRenderer(x, docs = {}, key="") {
+  _layoutRenderer(x, docs = {}, key = "") {
     console.log(3, this)
     if (x.orientation === ORIENTATION.vertical) {
       return (
@@ -225,7 +244,7 @@ export default class MultiEditor extends React.Component {
           key={key}
           className="splitpane"
           onResize={resize}>
-          {x.content.map((x, i) => this._layoutRenderer(x, docs, key+'.'+i))}
+          {x.content.map((x, i) => this._layoutRenderer(x, docs, key + '.' + i))}
         </SplitPane>
       );
     } else if (x.orientation === ORIENTATION.horizontal) {
@@ -235,7 +254,7 @@ export default class MultiEditor extends React.Component {
           className="splitpane"
           vertical={true}
           onResize={resize}>
-          {x.content.map((x, i) => this._layoutRenderer(x, docs, key+'.'+i))}
+          {x.content.map((x, i) => this._layoutRenderer(x, docs, key + '.' + i))}
         </SplitPane>);
       } else {
         return (<SplitPane
@@ -291,7 +310,7 @@ export default class MultiEditor extends React.Component {
     }
   }
 
-  componentDidUpdate(prevProps,prevState) {
+  componentDidUpdate(prevProps, prevState) {
     const nextProps = this.props
     const nextstate = this.state
     debugger
@@ -321,7 +340,6 @@ export default class MultiEditor extends React.Component {
 
 
   shouldComponentUpdate(nextProps, nextState) { // TODO update insteadof using publish subscribe
-    debugger
     return !!nextState.forced && this.state !== nextState;
   }
 
@@ -418,7 +436,7 @@ export default class MultiEditor extends React.Component {
             ...this.state.value,
             ...x,
           },
-          forced:true
+          forced: true
         })
       }),
     );

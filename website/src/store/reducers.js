@@ -1,6 +1,7 @@
 import * as actions from './actions';
 import { getCategoryByID, getDefaultParser, getParserByID, getTransformerByID, getDifferByID } from '../parsers';
 import queryString from 'query-string';
+import { query2instance } from '../utils/instance';
 
 const defaultParser = getDefaultParser(getCategoryByID('javascript'));
 
@@ -525,7 +526,7 @@ function activeInstance(state = initialState.activeInstance, action) {
     case 'INIT':
     case actions.SET_SNIPPET:
       if (location.search.length > 1) {
-        const parsed = queryString.parse(location.search);
+        const parsed = query2instance(queryString.parse(location.search));
         return parsed;
       }
     case actions.LOAD_INSTANCE:

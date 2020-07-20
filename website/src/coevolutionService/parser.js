@@ -1,4 +1,4 @@
-import api from "./api";
+import api from "./apiV1";
 import { stringify } from "query-string";
 
 // DEFFERED need more changes

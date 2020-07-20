@@ -1,4 +1,4 @@
-import api from "./api";
+import api from "./apiV1";
 import { stringify } from "query-string";
 import defaultDifferInterface from "../parsers/utils/defaultDifferInterface";
 import { v1 as uuidv1 } from 'uuid';

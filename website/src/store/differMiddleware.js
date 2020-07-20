@@ -1,8 +1,11 @@
+// @ts-check
 import { getDifferSettings, getCode, getDiffer, getDiffCode, getInstance } from './selectors';
 import { ignoreKeysFilter, locationInformationFilter, functionFilter, emptyKeysFilter, typeKeysFilter } from '../core/TreeAdapter.js';
 import { SET_CURSOR, SET_DIFF_RESULT } from './actions';
 import * as actions from './actions';
 import RemoteDifferService from '../coevolutionService/differ';
+import RemoteEvolutionService from '../coevolutionService/evolution';
+import RemoteImpactService from '../coevolutionService/impact';
 
 function diff(differ, oldCode, newCode, differSettings) {
   if (!differ._promise) {
@@ -18,15 +21,21 @@ function diff(differ, oldCode, newCode, differSettings) {
   );
 }
 
-function diff2(differ, { instance, oldcode, newCode }, differSettings) {
-  debugger
+async function diff2(differ, { instance, oldcode = null, newCode = null }, differSettings) {
   if (instance) {
-    return RemoteDifferService(differ, {
+    const param = {
       repo: instance.repo,
-      commitIdBefore: instance.before,
-      commitIdAfter: instance.after,
+      commitIdAfter: instance.commitIdAfter,
+      cases: instance.cases,
       settings: differSettings || differ.getDefaultOptions(),
-    })
+    }
+    debugger
+    if (instance.commitIdBefore)
+      param.commitIdBefore = instance.commitIdBefore
+    return {
+      evolutionP: RemoteEvolutionService(differ, param),
+      impactP: RemoteImpactService(differ, param),
+    }
   } else {
     throw new Error("no instance differ not implemented yet")
   }
@@ -79,48 +88,7 @@ export default store => next => action => {
       next(actions.setDiffStatus('started'));
       next(actions.setEvoImpactStatus('started'));
       const start = Date.now();
-      return diff2(newDiffer, { instance: newInstance }, newDifferSettings).then(
-        // return diff(newDiffer, newCodeBefore, newCode, newDifferSettings).then(
-        json => {
-          next(actions.setDiffStatus('received'));
-          next(actions.setEvoImpactStatus('received'));
-          // Did anything change in the meantime?
-          const newnewstate = store.getState()
-          if (newDiffer.id !== getDiffer(newnewstate).id ||
-            newDifferSettings !== getDifferSettings(newnewstate) ||
-            compareInstances(getInstance(newnewstate), newInstance)) {
-            return;
-          }
-          if (!getInstance(newnewstate)) {
-            if (newDiffer !== getDiffer(newnewstate) ||
-              newDifferSettings !== getDifferSettings(newnewstate)) {
-              return;
-            }
-          }
-          // Temporary adapter for parsers that haven't been migrated yet.
-          const treeAdapter = {
-            type: 'default',
-            options: {
-              openByDefault: (newDiffer.opensByDefault || (() => false)).bind(newDiffer),
-              nodeToRange: newDiffer.nodeToRange.bind(newDiffer),
-              nodeToName: newDiffer.getNodeName.bind(newDiffer),
-              walkNode: newDiffer.forEachProperty.bind(newDiffer),
-              filters: [
-                ignoreKeysFilter(newDiffer._ignoredProperties),
-                functionFilter(),
-                emptyKeysFilter(),
-                locationInformationFilter(newDiffer.locationProps),
-                typeKeysFilter(newDiffer.typeProps),
-              ],
-            },
-          };
-          next(
-            actions.setDiffResult({ time: Date.now() - start, diff: json.diff, treeAdapter })
-          );
-          next(
-            actions.setEvoImpactResult({ time: Date.now() - start, impact: json.impact, treeAdapter, uuid:json.uuid })
-          );
-        },
+      const errorHandler =
         (/** @type Error */ error) => {
           console.error(error); // eslint-disable-line no-console
           next(actions.setDiffStatus('error'));
@@ -128,7 +96,63 @@ export default store => next => action => {
           next(
             actions.setDiffResult({ error })
           );
-        },
+        }
+      return diff2(newDiffer, { instance: newInstance }, newDifferSettings).then(
+        // return diff(newDiffer, newCodeBefore, newCode, newDifferSettings).then(
+        ({ evolutionP, impactP }) => {
+          const treeAdaptAnduptDetect = () => {
+            // Did anything change in the meantime?
+            const newnewstate = store.getState()
+            if (newDiffer.id !== getDiffer(newnewstate).id ||
+              newDifferSettings !== getDifferSettings(newnewstate) ||
+              compareInstances(getInstance(newnewstate), newInstance)) {
+              return null;
+            }
+            if (!getInstance(newnewstate)) {
+              if (newDiffer !== getDiffer(newnewstate) ||
+                newDifferSettings !== getDifferSettings(newnewstate)) {
+                return null;
+              }
+            }
+            // Temporary adapter for parsers that haven't been migrated yet.
+            const treeAdapter = {
+              type: 'default',
+              options: {
+                openByDefault: (newDiffer.opensByDefault || (() => false)).bind(newDiffer),
+                nodeToRange: newDiffer.nodeToRange.bind(newDiffer),
+                nodeToName: newDiffer.getNodeName.bind(newDiffer),
+                walkNode: newDiffer.forEachProperty.bind(newDiffer),
+                filters: [
+                  ignoreKeysFilter(newDiffer._ignoredProperties),
+                  functionFilter(),
+                  emptyKeysFilter(),
+                  locationInformationFilter(newDiffer.locationProps),
+                  typeKeysFilter(newDiffer.typeProps),
+                ],
+              },
+            };
+            return treeAdapter
+          };
+          evolutionP.then(x => {
+            next(actions.setDiffStatus('received'));
+            const treeAdapter = treeAdaptAnduptDetect()
+            if (treeAdapter !== null) {
+              next(
+                actions.setDiffResult({ time: Date.now() - start, diff: x.value, treeAdapter })
+              );
+
+            }
+          }, errorHandler)
+          impactP.then(x => {
+            next(actions.setEvoImpactStatus('received'));
+            const treeAdapter = treeAdaptAnduptDetect()
+            if (treeAdapter !== null) {
+              next(
+                actions.setEvoImpactResult({ time: Date.now() - start, impact: x.value, treeAdapter, uuid: x.uuid })
+              );
+            }
+          }, errorHandler)
+        }, errorHandler,
       );
     }
   }

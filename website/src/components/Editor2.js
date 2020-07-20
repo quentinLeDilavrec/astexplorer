@@ -21,7 +21,6 @@ const defaultPrettierOptions = {
 export default class Editor2 extends React.Component {
 
   constructor(props) {
-    debugger
     super(props);
     this.state = {
       value: props.value,
@@ -245,7 +244,6 @@ export default class Editor2 extends React.Component {
       </div>
       ), e)
       // this.markIt(cm, s)
-      debugger
       this.codeMirror
         .addPanel(e, {
           position: "top",

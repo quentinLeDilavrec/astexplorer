@@ -35,6 +35,15 @@ export default class EvoImpactGraphReworked extends Component {
     if (this.state.uuid !== nextState.uuid) {
       return true;
     }
+    if (this.state.graph.evolutions !== nextState.graph.evolutions) {
+      return true;
+    }
+    if (this.state.graph.commitIdAfter !== nextState.graph.commitIdAfter) {
+      return true;
+    }
+    if (this.state.graph.commitIdBefore !== nextState.graph.commitIdBefore) {
+      return true;
+    }
     return false
   }
 
@@ -45,140 +54,338 @@ export default class EvoImpactGraphReworked extends Component {
   reloadGraph(x, state = {}) {
     x = JSON.parse(JSON.stringify(x)) // following operation mutate x
     console.log("reloadGraph", x, JSON.stringify(x))
-    const data = {
-      ...state,
-      // nodes: [],
-      links: [],
-      roots: x.roots,
-      tests: x.tests,
-      byId: {}
-    }
-    let max_depth = 0
-    if (ONLY_TESTS_DECLS) {
-      const testsDecls = {}
-      const removedReplacers = {}
-      data.nodes = [];
-      x.perRoot.forEach(z => {
-        z.vertices.forEach(y => {
-          // data.roots.push(x.)
-          max_depth = Math.max(max_depth, y.depth)
-          y.root = z.root
-          y.originalId = y.id
-          if (y.id === z.root) {
-            y.isRoot = true
-          }
-          if (y.value && y.value.position && y.value.position.isTest) {
-            if (testsDecls["" + z.root + " " + y.value.position.method.id]) {
-              testsDecls["" + z.root + " " + y.value.position.method.id].pointedCount += 1
-              testsDecls["" + z.root + " " + y.value.position.method.id].depth = Math.max(y.depth, testsDecls["" + z.root + " " + y.value.position.method.id].depth)
-            } else {
-              testsDecls["" + z.root + " " + y.value.position.method.id] = y.value.position.method
-              testsDecls["" + z.root + " " + y.value.position.method.id].causes = []
-              testsDecls["" + z.root + " " + y.value.position.method.id].effects = []
-              testsDecls["" + z.root + " " + y.value.position.method.id].root = y.root
-              testsDecls["" + z.root + " " + y.value.position.method.id].isTest = true
-              testsDecls["" + z.root + " " + y.value.position.method.id].depth = y.depth
-              testsDecls["" + z.root + " " + y.value.position.method.id].pointedCount = 1
+
+    function preprocess(x, state) {
+      const data = {
+        ...state,
+        // nodes: [],
+        links: [],
+        roots: x.roots,
+        tests: x.tests,
+        byId: {}
+      }
+      let max_depth = 0
+      if (ONLY_TESTS_DECLS) {
+        const testsDecls = {}
+        const removedReplacers = {}
+        data.nodes = [];
+        x.perRoot.forEach(z => {
+          z.vertices.forEach(y => {
+            // data.roots.push(x.)
+            max_depth = Math.max(max_depth, y.depth)
+            y.root = z.root
+            y.originalId = y.id
+            if (y.id === z.root) {
+              y.isRoot = true
             }
-            testsDecls["" + z.root + " " + y.value.position.method.id].causes.push(y.id)
-            removedReplacers[z.root] = removedReplacers[z.root] || {}
-            removedReplacers[z.root][y.id] = "" + z.root + " " + y.value.position.method.id
-          } else {
-            data.nodes.push(y)
-          }
+            if (y.value && y.value.position && y.value.position.isTest) {
+              if (testsDecls["" + z.root + " " + y.value.position.method.id]) {
+                testsDecls["" + z.root + " " + y.value.position.method.id].pointedCount += 1
+                testsDecls["" + z.root + " " + y.value.position.method.id].depth = Math.max(y.depth, testsDecls["" + z.root + " " + y.value.position.method.id].depth)
+              } else {
+                testsDecls["" + z.root + " " + y.value.position.method.id] = y.value.position.method
+                testsDecls["" + z.root + " " + y.value.position.method.id].causes = []
+                testsDecls["" + z.root + " " + y.value.position.method.id].effects = []
+                testsDecls["" + z.root + " " + y.value.position.method.id].root = y.root
+                testsDecls["" + z.root + " " + y.value.position.method.id].isTest = true
+                testsDecls["" + z.root + " " + y.value.position.method.id].depth = y.depth
+                testsDecls["" + z.root + " " + y.value.position.method.id].pointedCount = 1
+              }
+              testsDecls["" + z.root + " " + y.value.position.method.id].causes.push(y.id)
+              removedReplacers[z.root] = removedReplacers[z.root] || {}
+              removedReplacers[z.root][y.id] = "" + z.root + " " + y.value.position.method.id
+            } else {
+              data.nodes.push(y)
+            }
+          });
         });
-      });
-      data.nodes.forEach(x => {
-        x.causes.forEach(y => {
-          const o = {
-            target: (removedReplacers[x.root][y] || ("" + x.root + " " + y)),
-            source: x
-          }
-          if (removedReplacers[x.root][y]) {
-            o.count = testsDecls[removedReplacers[x.root][y]].pointedCount
-          }
-          data.links.push(o)
-        })
-        x.effects.forEach(y => {
-          if (removedReplacers[x.root][y]) {
+        data.nodes.forEach(x => {
+          x.causes.forEach(y => {
             const o = {
               target: (removedReplacers[x.root][y] || ("" + x.root + " " + y)),
               source: x
             }
-            // o.count = testsDecls[removedReplacers[x.root][y]].pointedCount
+            if (removedReplacers[x.root][y]) {
+              o.count = testsDecls[removedReplacers[x.root][y]].pointedCount
+            }
             data.links.push(o)
-          }
+          })
+          x.effects.forEach(y => {
+            if (removedReplacers[x.root][y]) {
+              const o = {
+                target: (removedReplacers[x.root][y] || ("" + x.root + " " + y)),
+                source: x
+              }
+              // o.count = testsDecls[removedReplacers[x.root][y]].pointedCount
+              data.links.push(o)
+            }
+          })
+        });
+        data.nodes = data.nodes.concat(Object.values(testsDecls))
+        data.nodes.forEach(x => {
+          x.id = "" + x.root + " " + x.originalId
         })
-      });
-      data.nodes = data.nodes.concat(Object.values(testsDecls))
-      data.nodes.forEach(x => {
-        x.id = "" + x.root + " " + x.originalId
-      })
-    } else {
-      data.nodes = []
-      const missing = {}
-      x.perRoot.forEach(z => {
-        z.vertices.forEach(x => {
-          x.isRoot = x.id === z.root
-          x.causes2 = []
-          x.effects2 = []
-          x.root = z.root
-          x.originalId = x.id
-          x.id = "" + z.root + " " + x.id
-          data.byId[x.id] = x
-          max_depth = Math.max(max_depth, x.depth)
-          // x.effects.forEach(y => {
-          //   data.links.push({
-          //     target: x.id,
-          //     source: y
-          //   })
-          // });
-          x.causes = x.causes.map(y => {
-            const tmp = "" + x.root + " " + y;
-            data.links.push({
-              target: x,
-              source: tmp
-            })
-            data.byId[tmp] = data.byId[tmp] || {
-              "value": {
-                "sig": {
-                  "declType": "",
-                  "signature": "",
-                  "name": "",
-                  "id": 111111111111
-                },
-                "position": {
-                  "isTest": true,
-                  "file": "",
-                  "start": 1111111,
-                  "end": 11111111,
-                  "method": {
+      } else {
+        data.nodes = []
+        const missing = {}
+        x.perRoot.forEach(z => {
+          z.vertices.forEach(x => {
+            x.isRoot = x.id === z.root
+            x.causes2 = []
+            x.effects2 = []
+            x.root = z.root
+            x.originalId = x.id
+            x.id = "" + z.root + " " + x.id
+            data.byId[x.id] = x
+            max_depth = Math.max(max_depth, x.depth)
+            // x.effects.forEach(y => {
+            //   data.links.push({
+            //     target: x.id,
+            //     source: y
+            //   })
+            // });
+            x.causes = x.causes.map(y => {
+              const tmp = "" + x.root + " " + y;
+              data.links.push({
+                target: x,
+                source: tmp
+              })
+              data.byId[tmp] = data.byId[tmp] || {
+                "value": {
+                  "sig": {
                     "declType": "",
                     "signature": "",
                     "name": "",
-                    "id": 111111111111111
+                    "id": 111111111111
+                  },
+                  "position": {
+                    "isTest": true,
+                    "file": "",
+                    "start": 1111111,
+                    "end": 11111111,
+                    "method": {
+                      "declType": "",
+                      "signature": "",
+                      "name": "",
+                      "id": 111111111111111
+                    }
                   }
-                }
-              },
-              "causes": [],
-              "effects": [],
-              "isRoot": [],
-              "depth": x.depth+1,
-              causes2: [],
-              effects2: [],
-              name: tmp,
-              id: tmp,
-              originalId: y,
-              root: x.root,
-              missing: true,
-            }
-            return tmp
-          })
+                },
+                "causes": [],
+                "effects": [],
+                "isRoot": [],
+                "depth": x.depth + 1,
+                causes2: [],
+                effects2: [],
+                name: tmp,
+                id: tmp,
+                originalId: y,
+                root: x.root,
+                missing: true,
+              }
+              return tmp
+            })
+          });
         });
-      });
-      data.nodes = Object.values(data.byId);
+        data.nodes = Object.values(data.byId);
+      }
+      return data
     }
-    return this.drawGraphChart(data);
+    function preprocess2(x, state) {
+      const data = {
+        ...state,
+        nodes: [],
+        links: [],
+        roots: x.roots || [],
+        tests: x.tests || [],
+        byId: {}
+      }
+      const nodes = []
+      // const nodes_more = {}
+      const rangesMap = {}
+      let count = 0;
+      const wanted = x.ranges.findIndex(x => x.sig && x.sig === "create()")
+      const computed = {}
+      const next_wanted = {}
+      const next_wanted_file = {}
+      for (let i = 0; i < x.impacts.length; i++) {
+        const iterator = x.impacts[i]
+        // if (
+        //   iterator.content.type !== "Change Return Type" 
+        // // && iterator.content.type !== "Change Variable Type" 
+        // // && iterator.content.type !== "Change Parameter Type"
+        // ) {
+        //   continue
+        // }
+        // if (count > 200) {
+        //   break
+        // } else count++
+        if (iterator.causes.some(x => x === wanted) || iterator.effects.some(x => x === wanted)) {
+          console.log(iterator)
+        } else if (iterator.effects.some(y => x.ranges[y].file === "core/src/main/java/com/graphhopper/storage/GraphBuilder.java")) {
+          console.log(iterator)
+        } else continue
+        computed[i] = i
+        for (const cause of iterator.causes) {
+          // if (typeof cause !== "number") {
+          //   const aaa = nodes_more[JSON.stringify(cause)]
+          //   if (aaa === undefined) {
+          //     tmp_cause = nodes.length
+          //     nodes.push(cause)
+          //     nodes_more[JSON.stringify(cause)] = tmp_cause
+          //   } else {
+          //     tmp_cause = aaa
+          //   }
+          // } else {
+          const element = x.ranges[cause]
+          data.byId[cause] = { value: x.ranges[cause], id: cause, causes2: [], effects2: [] };
+          rangesMap[element.file + ":" + element.start + "-" + element.end] = data.byId[cause]
+          next_wanted[cause] = cause
+          next_wanted_file[element.file] = element.file
+          // }
+          for (const effect of iterator.effects) {
+            // let tmp_effect = effect
+            // if (typeof effect !== "number") {
+            //   const bbb = nodes_more[JSON.stringify(effect)]
+            //   if (bbb === undefined) {
+            //     tmp_effect = nodes.length
+            //     nodes.push(effect)
+            //     nodes_more[JSON.stringify(effect)] = tmp_effect
+            //   } else {
+            //     tmp_effect = bbb
+            //   }
+            // } else {
+            const element = x.ranges[effect]
+            data.byId[effect] = { value: element, id: effect, causes2: [], effects2: [] };
+            rangesMap[element.file + ":" + element.start + "-" + element.end] = data.byId[effect]
+            next_wanted_file[element.file] = element.file
+            // }
+            data.links.push({
+              target: effect,
+              source: cause,
+              content: iterator.content,
+              type: iterator.content.type,
+            })
+          }
+        }
+      }
+      for (let index = 0; index < 1; index++) {
+        for (let i = 0; i < x.impacts.length; i++) {
+          const iterator = x.impacts[i]
+          // if (
+          //   iterator.content.type !== "Change Return Type" 
+          // // && iterator.content.type !== "Change Variable Type" 
+          // // && iterator.content.type !== "Change Parameter Type"
+          // ) {
+          //   continue
+          // }
+          // if (count > 200) {
+          //   break
+          // } else count++
+          if (computed[i] === i && iterator.causes.some(x => next_wanted[x] === x) || iterator.effects.some(x => next_wanted[x] === x)) {
+            console.log(iterator)
+          } else if (computed[i] === i && iterator.causes.some(x => next_wanted_file[x.file] === x.file) || iterator.effects.some(x => next_wanted_file[x.file] === x.file)) {
+            console.log(iterator)
+          } else continue
+          computed[i] = i
+          for (const cause of iterator.causes) {
+            // if (typeof cause !== "number") {
+            //   const aaa = nodes_more[JSON.stringify(cause)]
+            //   if (aaa === undefined) {
+            //     tmp_cause = nodes.length
+            //     nodes.push(cause)
+            //     nodes_more[JSON.stringify(cause)] = tmp_cause
+            //   } else {
+            //     tmp_cause = aaa
+            //   }
+            // } else {
+            const element = x.ranges[cause]
+            data.byId[cause] = { value: x.ranges[cause], id: cause, causes2: [], effects2: [] };
+            rangesMap[element.file + ":" + element.start + "-" + element.end] = data.byId[cause]
+            next_wanted[cause] = cause
+            next_wanted_file[element.file] = element.file
+            // }
+            for (const effect of iterator.effects) {
+              // let tmp_effect = effect
+              // if (typeof effect !== "number") {
+              //   const bbb = nodes_more[JSON.stringify(effect)]
+              //   if (bbb === undefined) {
+              //     tmp_effect = nodes.length
+              //     nodes.push(effect)
+              //     nodes_more[JSON.stringify(effect)] = tmp_effect
+              //   } else {
+              //     tmp_effect = bbb
+              //   }
+              // } else {
+              const element = x.ranges[effect]
+              data.byId[effect] = { value: element, id: effect, causes2: [], effects2: [] };
+              rangesMap[element.file + ":" + element.start + "-" + element.end] = data.byId[effect]
+              next_wanted[effect] = effect
+              next_wanted_file[element.file] = element.file
+              // }
+              data.links.push({
+                target: effect,
+                source: cause,
+                content: iterator.content,
+                type: iterator.content.type,
+              })
+            }
+          }
+        }
+      }
+      const roots = {}
+      if (x.evolutions) {
+        for (const evo of x.evolutions[0].refactorings) {
+          evo.before = evo.leftSideLocations
+          evo.after = evo.rightSideLocations
+          evo.commitIdAfter = x.commitIdAfter
+          for (const element of evo.leftSideLocations) {
+            if (element.filePath === "core/src/main/java/com/graphhopper/storage/GraphBuilder.java") {
+              if (element.start === 3563 && element.end === 3575) {
+                console.log(element)
+              }
+            }
+            const key = element.filePath + ":" + element.start + "-" + element.end
+            let rrr = rangesMap[key]
+            if (rrr === undefined) {
+              rrr = {
+                file: element.filePath,
+                start: element.start,
+                end: element.end,
+                id: nodes.length
+              }
+              rangesMap[key] = rrr
+              // nodes.push(rrr)
+              // data.byId[rrr.id] = rrr
+            }
+            evo.commitIdBefore = rrr.commitId || evo.commitIdBefore || x.commitIdBefore
+            element.commitId = rrr.commitId || element.commitId || evo.commitIdBefore
+            element.file = element.filePath
+            rrr.evolution = evo
+            rrr.isRoot = true
+            if (roots[key] === undefined) {
+              data.roots.push(rangesMap[key].id)
+              roots[key] = true
+            }
+          }
+          for (const element of evo.leftSideLocations) {
+            element.commitId = element.commitId || x.commitIdAfter
+            element.file = element.filePath
+          }
+        }
+      }
+
+      data.nodes = Object.values(data.byId)
+      return data
+    }
+    let data
+    try {
+      data = preprocess2(x, state)
+      return this.drawGraphChart(data);
+    } catch (error) {
+      console.error(error)
+      data = preprocess(x, state)
+    }
   }
 
   drawGraphChart(data, max_depth) {
@@ -192,8 +399,8 @@ export default class EvoImpactGraphReworked extends Component {
 
       function isTest(d) {
         return d.isTest || (d.value
-          && d.value.position
-          && d.value.position.isTest)
+          && ((d.value.isTest) || (d.value.position
+            && d.value.position.isTest)))
       }
 
       var y = d3.scaleLinear()
@@ -201,28 +408,34 @@ export default class EvoImpactGraphReworked extends Component {
         .range([20, height / 5 - 20]);
 
       let width = graph.roots.length * 1000;
-      let height = 600;
+      let height = 600+graph.roots.length*100;
 
       let color = d3.scaleOrdinal(d3.schemeCategory10);
 
       const zetgzerfg = {}
       graph.roots.forEach((x, i) => zetgzerfg[x] = i)
-
       const graphLayout = d3.forceSimulation(graph.nodes)
         .force("charge", d3.forceManyBody().distanceMin(1000)
-          .strength(d => isTest(d) ? (d.isTest ? -40 : -40) : -5000))
-        .force("y", d3.forceY(d => {
-          if (isTest(d)) {
-            return 300 * d.depth - 50
-          }
-          return 300 * d.depth
-        }).strength(d => isTest(d) ? .8 : 1.))
-        .force("x", d3.forceX(d => {
-          return zetgzerfg[d.root] * 1000
-        }).strength(d => d.isRoot ? (1) : .2))
+          .strength(d => isTest(d) ? (d.isTest ? -40 : -40) : -500))
+        // .force("y", d3.forceY(d => {
+        //   if (isTest(d)) {
+        //     return 300 * d.depth - 50
+        //   }
+        //   return 300 * d.depth
+        // }).strength(d => isTest(d) ? .8 : 1.))
+        // .force("x", d3.forceX(d => {
+        //   return zetgzerfg[d.root] * 1000
+        // }).strength(d => d.isRoot ? (1) : .2))
+        .force("collide",
+          d3.forceCollide().radius(NODE_SIZE * 4).strength(.9).iterations(40)
+          // d3.forceCollide(NODE_SIZE*100)
+          // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : d.isRoot ? 20 :10) * NODE_SIZE*10)
+          // .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : 1)
+          // .radius(NODE_SIZE*100).strength(1)
+        )
         .force("link", d3.forceLink(graph.links)
           .id(function (d) { return d.id; })
-          .distance(d => isTest(d) ? 10 : 20).strength(.1));
+          .distance(d => isTest(d) ? 10 : 40).strength(.1));
 
 
       const adjlist = [];
@@ -230,8 +443,8 @@ export default class EvoImpactGraphReworked extends Component {
       graph.links.forEach(function (d) {
         adjlist[d.source.index + "-" + d.target.index] = true;
         adjlist[d.target.index + "-" + d.source.index] = true;
-        d.target.causes2.push(d);
-        d.source.effects2.push(d);
+        (d.target.causes2 = d.target.causes2 || []).push(d);
+        (d.source.effects2 = d.source.effects2 || []).push(d);
       });
 
       setTimeout(function () {
@@ -239,21 +452,21 @@ export default class EvoImpactGraphReworked extends Component {
         graphLayout.restart();
       }, 1000)
       setTimeout(function () {
-        graph.roots.forEach(element => {
-          graphLayout.force("g" + element, null)
-        });
+        // graph.roots.forEach(element => {
+        //   graphLayout.force("g" + element, null)
+        // });
         graphLayout
-          .force("charge", d3.forceManyBody().distanceMin(1000)
-            .strength(d => 5000))
+          // .force("charge", d3.forceManyBody().distanceMin(1000)
+          //   .strength(d => 5000))
           .force("charge", d3.forceManyBody().distanceMax(1000)
-            .strength(d => -5000))
+            .strength(d => -2000))
           .force("link", d3.forceLink(graph.links)
             .id(function (d) { return d.id; })
-            .distance(d => isTest(d) ? 10 : 20).strength(.8))
-          .force("collision", d3.forceCollide(40)
-            // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : 10) * NODE_SIZE)
-            // .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
-          )
+            .distance(d => isTest(d) ? 10 : 40).strength(.8))
+        // .force("collision", d3.forceCollide(1)
+        //   .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : d.isRoot ? 20 :10) * NODE_SIZE)
+        //   .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
+        // )
         graphLayout.restart();
       }, 5000)
 
@@ -293,9 +506,20 @@ export default class EvoImpactGraphReworked extends Component {
         .enter()
         .append("line")
         .attr("stroke", function (d) {
-          return isTest(d.target) || isTest(d.source) ? "darkgray" : "black"
+          return isTest(d.target) || isTest(d.source) 
+          ? (d.content && d.content.type==="call"?"orange":d.content && d.content.type==="adjustment"?"green":"darkgray")
+          : (d.content && d.content.type==="call"?"red":d.content && d.content.type==="adjustment"?"darkgreen":"black")
         })
         .attr("stroke-width", "5px");
+
+      links.call(myaddtitle);
+      function myaddtitle(node) {
+        node
+          .append("svg:title")
+          .text(function (d, i) {
+          return d.content && d.content.type
+          })
+      }
 
       const nodes = container.append("g").attr("class", "nodes")
         .selectAll("g")
@@ -321,7 +545,7 @@ export default class EvoImpactGraphReworked extends Component {
           .style("font-size", "120px")
           .style("font-family", "sans-serif")
           .attr("fill", d => {
-            return "green"
+            return isTest(d) ? "orange" : "green"
           })
           .text(d => {
             if (d.evolution.type === "Move Method") {
@@ -337,7 +561,7 @@ export default class EvoImpactGraphReworked extends Component {
           .attr("text-anchor", "middle")
           .append("svg:title")
           .text(function (d, i) {
-            return d.evolution.type
+            return d.evolution.type + "\n" + (d.value && d.value.start) + "," + (d.value && d.value.end)
           })
         const other_nodes = node
           .filter(d => {
@@ -362,7 +586,7 @@ export default class EvoImpactGraphReworked extends Component {
             if (typeof d.name === "string") {
               return d.name
             }
-            const value = d.value
+            const value = d.value || d
             if (typeof value === "string") {
               return value
             }
@@ -372,14 +596,14 @@ export default class EvoImpactGraphReworked extends Component {
             if (typeof value.sig === "string") {
               return value.sig
             }
-            return value.sig.name
+            return "" + value.start + "," + value.end
           })
           .append("svg:title")
           .text(function (d, i) {
             if (typeof d.signature === "string") {
               return d.declType + '.' + d.signature
             }
-            const value = d.value
+            const value = d.value || d
             if (typeof value === "string") {
               return value
             }
@@ -387,9 +611,12 @@ export default class EvoImpactGraphReworked extends Component {
               return value.declType + '.' + value.signature
             }
             if (typeof value.sig === "string") {
-              return value.sig
+              return value.sig + "\n" + value.start + "," + value.end
             }
-            return value.sig.declType + '.' + value.sig.signature
+            if (value.sig) {
+              return value.sig.declType + '.' + value.sig.signature + "\n" + value.type
+            }
+            return "" + value.start + "," + value.end
           })
 
         other_nodes
@@ -427,7 +654,7 @@ export default class EvoImpactGraphReworked extends Component {
             if (typeof value.sig === "string") {
               return value.sig
             }
-            return value.sig.name
+            return "" + value.start + "," + value.end
           })
           .attr("dominant-baseline", "middle")
           .attr("text-anchor", "middle")
@@ -445,9 +672,12 @@ export default class EvoImpactGraphReworked extends Component {
               return value.declType + '.' + value.signature
             }
             if (typeof value.sig === "string") {
-              return value.sig
+              return value.sig + "\n" + value.start + "," + value.end
             }
-            return value.sig.declType + '.' + value.sig.signature
+            if (value.sig !== undefined) {
+              return value.sig.declType + '.' + value.sig.signature
+            }
+            return "" + value.start + "," + value.end + "\n" + value.type
           });
       }
 
@@ -468,7 +698,8 @@ export default class EvoImpactGraphReworked extends Component {
       //     .attr("dy", ".35em")
       //     .attr("text-anchor", "middle")
       // .text(function (d) {
-      //   return d.count && d.count > 1 ? "" + d.count : "";
+      //   return d.content && d.content.type
+      //   // return d.count && d.count > 1 ? "" + d.count : "";
       // });
 
       nodes.call(
@@ -488,6 +719,9 @@ export default class EvoImpactGraphReworked extends Component {
           const curr = stack.pop()
           if (curr.isRoot) {
             r.push(curr)
+          } else if (curr.value && curr.value.description === "given") {
+            curr.value.commitId = curr.effects2[0].target.value.commitId
+            r.push(curr)
           } else {
             stack.push(...(curr.causes2.map(x => x.source)));
           }
@@ -499,17 +733,17 @@ export default class EvoImpactGraphReworked extends Component {
         // TODO make it available to rest of app
         if (d.evolution) {
           _this.props.onSelection({
-            filePath: d.value.position.file,
-            commitId: d.evolution.commitIdBefore,
-            start: d.value.position.start,
-            end: d.value.position.end,
+            filePath: d.value.file,
+            commitId: d.value.commitId,
+            start: d.value.start,
+            end: d.value.end,
           })
         } else {
           _this.props.onSelection({
-            filePath: d.value.position.file,
-            commitId: findRoot(d)[0].evolution.commitIdBefore,
-            start: d.value.position.start,
-            end: d.value.position.end,
+            filePath: d.value.file,
+            commitId: findRoot(d)[0].commitId,
+            start: d.value.start,
+            end: d.value.end,
           })
         }
         PubSub.publish("CHANGE_DIFF_CONTEXT", { node: d })

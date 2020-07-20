@@ -46,7 +46,10 @@ export default function EvoGraphOutput({
         {
           React.createElement(
             visualizations[selectedOutput],
-            { graph: result.graph, position, onSelection, uuid, onScreenShot: x => onScreenShot=x, returnScreenShot },
+            {
+              graph: result.graph, position, onSelection, uuid,
+              onScreenShot: x => onScreenShot = x, returnScreenShot
+            },
           )
         }
       </ErrorBoundary>
@@ -69,7 +72,8 @@ export default function EvoGraphOutput({
     <div className="output highlight">
       <div className="toolbar">
         {buttons}
-        <span className="fa fa-camera time" onClick={(...x)=>onScreenShot(...x)}>
+        <span className="fa fa-camera time"
+          onClick={(...x) => onScreenShot(...x)}>
         </span>
         <span className="time">
           {betterLoadingDisplay(formatTime(result.time), status)}
@@ -108,7 +112,7 @@ class ErrorBoundary extends React.Component {
           An error was caught while rendering the Graph. This usually is an issue with
           astexplorer itself. Have a look at the console for more information.
           Consider <a href="https://github.com/quentinLeDilavrec/astexplorer/issues/new?template=bug_report.md">filing a bug report</a>, but <a href="https://github.com/fkling/astexplorer/issues/">check first</a> if one doesn&quot;t already exist. Thank you!
-				</div>
+        </div>
       );
     }
     return this.props.children;

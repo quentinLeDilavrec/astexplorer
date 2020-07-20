@@ -27,7 +27,6 @@ export default {
   },
 
   transform({ eslint, sourceCode, rules, utils }, transformCode, code) {
-    debugger
     utils.defineRule(rules, transformCode);
     return utils.runRule(code, eslint, sourceCode);
   },

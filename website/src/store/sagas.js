@@ -33,6 +33,7 @@ import {
   getDifferSettings,
 } from './selectors';
 import queryString from 'query-string';
+import { query2instance } from '../utils/instance';
 
 function stripImpacts({ perRoot, roots, tests }) {
   return {
@@ -204,7 +205,7 @@ function* watchSnippetURI(storageAdapter) {
   if (location.search.length > 1 && revision.getInstance) {
     const inst = revision.getInstance()
     if (inst) {
-      const parsed = queryString.parse(location.search);
+      const parsed = query2instance(queryString.parse(location.search));
       if ((parsed.repo || parsed.before || parsed.after) &&
         (inst.repo !== parsed.repo ||
           inst.commitId !== parsed.commitId ||

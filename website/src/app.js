@@ -40,6 +40,8 @@ import GraphChart from './containers/GraphOutputContainer';
 import { loadInstance } from './store/actions';
 import queryString from 'query-string';
 import CoEvolutionService from './coevolutionService';
+import { assertAbstractType } from 'graphql';
+import { query2instance } from './utils/instance';
 
 function resize() {
   PubSub.publish('PANEL_RESIZE');
@@ -142,19 +144,19 @@ store.subscribe(debounce(() => {
   }
 }));
 sagaMiddleware.run(saga, new StorageHandler([evo, gist, parse]), new CoEvolutionService([]));
-  /*
-  on open JDK 11
+/*
+on open JDK 11
 https://github.com/INRIA/spoon.git;4b42324566bdd0da145a647d136a2f555c533978;904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b
 https://github.com/INRIA/spoon.git;8fd216c220de592eb5b9cb306404c54673b71d37;904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b
 https://github.com/google/truth.git;fb7f2fe21d8ca690daabedbd31a0ade99244f99c;1768840bf1e69892fd2a23776817f620edfed536
 spoon.compiler.ModelBuildingException: The type Platform is already defined
-        at spoon.support.compiler.jdt.JDTBasedSpoonCompiler.reportProblem(JDTBasedSpoonCompiler.java:573)
+      at spoon.support.compiler.jdt.JDTBasedSpoonCompiler.reportProblem(JDTBasedSpoonCompiler.java:573)
 https://github.com/antlr/antlr4.git;53678867ca61ffb4aa79298b40efcc74bebf952c;b395127e733b33c27f344695ebf155ecf5edeeab
 evolution des not seem to be in the spoon AST
 https://github.com/apache/hive.git;42326958148c2558be9c3d4dfe44c9e735704617;240097b78b70172e1cf9bc37876a566ddfb9e115
 https://github.com/quentinLeDilavrec/interacto-java-api.git;5377ad5864cd54e776aa30f690fd84253153677a;3bf9a6d0876fc5c99221934a5ecd161ea51204f0
 java.lang.IllegalStateException: Module should be known
-        at org.eclipse.jdt.internal.compiler.batch.CompilationUnit.module(CompilationUnit.java:126)
+      at org.eclipse.jdt.internal.compiler.batch.CompilationUnit.module(CompilationUnit.java:126)
 https://github.com/quentinLeDilavrec/interacto-java-api.git;7a7caea2ef82d4e6c676da085116427069b86e80;3bf9a6d0876fc5c99221934a5ecd161ea51204f0
 idem
 https://github.com/quentinLeDilavrec/interacto-java-api.git;d022a91c49378cd182d6b1398dad3939164443b4;3bf9a6d0876fc5c99221934a5ecd161ea51204f0
@@ -181,6 +183,31 @@ https://github.com/plutext/docx4j.git;4b4b0babb11891427a8123771350d46417bb5dd4;e
 
 https://github.com/undertow-io/undertow.git;a55874e2d4c370e02ad3eb189a5210839f6dab20;d5b2bb8cd1393f1c5a5bb623e3d8906cd57e53c4
 same as graphhopper
+
+ 
+~
+http://176.180.199.146:50000/?repo=https://github.com/graphhopper/graphhopper.git&before=0c77e1d8a4337b8c3e649957dd4f1f6ef377a377&after=7f80425b6a0af9bdfef12c8a873676e39e0a04a6&
+type=RENAME_METHOD
+&before.a=core/src/main/java/com/graphhopper/GraphHopper.java:12991-13073
+&after.a=core/src/main/java/com/graphhopper/GraphHopper.java:13052-13165
+
+~
+http://176.180.199.146:50000/?repo=https://github.com/graphhopper/graphhopper.git&before=0c77e1d8a4337b8c3e649957dd4f1f6ef377a377&after=7f80425b6a0af9bdfef12c8a873676e39e0a04a6
+&type=MOVE_OPERATION
+&before.a=core/src/main/java/com/graphhopper/storage/GraphHopperStorage.java:22763-23102
+&after.a=core/src/main/java/com/graphhopper/storage/BaseGraph.java:22195-22590
+
+
+http://176.180.199.146:50000/?repo=https://github.com/INRIA/spoon.git&before=77b7b4e0a34e471f44faa304d287445906da3a3e&after=8ff4eb442fc32dbda372aeec673d0b9f74b04e98
+&type=MOVE_OPERATION
+&before.a=src/test/java/spoon/test/imports/ImportScannerTest.java:7662-8057
+&after=src/test/java/spoon/test/imports/ImportTest.java:82238-82633
+
+
+http://176.180.199.146:50000/?repo=https://github.com/INRIA/spoon.git&before=77b7b4e0a34e471f44faa304d287445906da3a3e&after=8ff4eb442fc32dbda372aeec673d0b9f74b04e98
+&type=MOVE_OPERATION&before.a=src/test/java/spoon/test/imports/ImportScannerTest.java:7079-7281
+
+http://127.0.0.1:8095/?repo=https://github.com/undertow-io/undertow.git&before=a55874e2d4c370e02ad3eb189a5210839f6dab20&after=d5b2bb8cd1393f1c5a5bb623e3d8906cd57e53c4
 */
 
 store.dispatch({ type: 'INIT' });
@@ -192,12 +219,14 @@ render(
   document.getElementById('container'),
 );
 
+
+
 global.onhashchange = () => {
   if (location.hash.length > 1) {
     store.dispatch(loadSnippet());
   } else if (location.search.length > 1) {
     const parsed = queryString.parse(location.search);
-    store.dispatch(loadInstance(parsed));
+    store.dispatch(loadInstance(query2instance(parsed)));
   }
 };
 
@@ -205,7 +234,7 @@ if (location.hash.length > 1) {
   store.dispatch(loadSnippet());
 } else if (location.search.length > 1) {
   const parsed = queryString.parse(location.search);
-  store.dispatch(loadInstance(parsed));
+  store.dispatch(loadInstance(query2instance(parsed)));
 }
 
 global.onbeforeunload = () => {

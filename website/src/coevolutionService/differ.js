@@ -1,4 +1,4 @@
-import api from "./api";
+import api from "./apiV1";
 import { stringify } from "query-string";
 import defaultDifferInterface from "../parsers/utils/defaultDifferInterface";
 import { v1 as uuidv1 } from 'uuid';
@@ -6,7 +6,7 @@ import { v1 as uuidv1 } from 'uuid';
 /**
  * 
  * @param {defaultDifferInterface} differ 
- * @param {any} query 
+ * @param {any} query can be nested when using PUT request
  * @param {RequestInit} options 
  */
 export default async function RemoteDifferService(differ, query, options = {}) {
@@ -28,6 +28,9 @@ export default async function RemoteDifferService(differ, query, options = {}) {
         if (differ.processImpacts)
         json.impact = differ.processImpacts(json.impact)
         json.uuid = uuidv1()
+        console.log("differ responce", json)
+        console.log("differ responce .impact", json.impact)
+        console.log("differ responce .diff", json.diff)
         return json
     }
     switch (response.status) {

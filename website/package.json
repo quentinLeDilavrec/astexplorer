@@ -110,6 +110,7 @@
     "luaparse": "^0.2.1",
     "lucene": "^2.1.0",
     "meriyah": "^1.6.5",
+    "neo4jd3": "0.0.5",
     "parse5": "^5.1.0",
     "parse5-htmlparser2-tree-adapter": "^5.1.0",
     "php-parser": "^3.0.0-prerelease.8",
