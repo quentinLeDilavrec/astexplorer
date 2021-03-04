@@ -22,8 +22,11 @@ export default {
   // },
 
   processEvolutions(evolutions) {
-    const res = evolutions.commits;
-    res.forEach(x => x.refactorings.forEach(addSide))
+    const res = evolutions;
+    res.forEach(addSide)
+    res.forEach(
+      ({before,after, content},i) => 
+      res[i] = {before, after, ...content})
     return res
   },
 
@@ -183,8 +186,8 @@ function mapObject(obj, fct) {
 }
 
 function addSide(op) { // TODO remove it
-  op.leftSideLocations.map(x => x.side = "left")
-  op.rightSideLocations.map(x => x.side = "right")
+  op.before.map(x => x.side = "left")
+  op.after.map(x => x.side = "right")
 }
 
 console.log('RefactoringTypes', RefactoringTypes)
@@ -203,8 +206,8 @@ for (const key in RefactoringTypes) {
   if (RefactoringTypes.hasOwnProperty(key)) {
     const element = RefactoringTypes[key];
     const o = {
-      before: element.left.map(betterSide),
-      after: element.right.map(betterSide),
+      left: element.left.map(betterSide),
+      right: element.right.map(betterSide),
     }
     RefactoringTypes2[key] = o
   }
@@ -217,9 +220,9 @@ const FilteredRefactorings = {}
 for (const key in RefactoringTypes) {
   if (RefactoringTypes.hasOwnProperty(key)) {
     const element = RefactoringTypes2[key];
-    if (!element.before.some(x => x.keys.method || x.keys.class)) continue
-    if (element.before.some(x => x.many)) continue
-    if (element.after.some(x => x.many)) continue
+    if (!element.left.some(x => x.keys.method || x.keys.class)) continue
+    if (element.left.some(x => x.many)) continue
+    if (element.right.some(x => x.many)) continue
     FilteredRefactorings[key] = RefactoringTypes[key]
   }
 }
@@ -232,7 +235,7 @@ const RefactoringsByKeyword = {}
 for (const key in RefactoringTypes2) {
   if (RefactoringTypes2.hasOwnProperty(key)) {
     const element = RefactoringTypes2[key]
-    for (const kind of element.before) {
+    for (const kind of element.left) {
       for (const kwkey in kind.keys) {
         if (kind.keys.hasOwnProperty(kwkey)) {
           RefactoringsByKeyword[kwkey] = RefactoringsByKeyword[kwkey] || {}
@@ -240,7 +243,7 @@ for (const key in RefactoringTypes2) {
         }
       }
     }
-    for (const kind of element.after) {
+    for (const kind of element.right) {
       for (const kwkey in kind.keys) {
         if (kind.keys.hasOwnProperty(kwkey)) {
           RefactoringsByKeyword[kwkey] = RefactoringsByKeyword[kwkey] || {}

@@ -53,11 +53,12 @@ function heuristic(node) {
   }
   for (const effect of node.effects2) {
     if (effect.content && effect.content.type === "expand to executable") {
-      if (effect.target.evolution && effect.target.evolution.type === "Move Method") {
-        for (const range of effect.target.evolution.after) {
+      effect.target.evolutions && effect.target.evolutions.forEach(x => {
+        if(x.type === "Move Method")
+        for (const range of x.after) {
           return {...node,file:range.file||range.filePath}
         }
-      }
+      })
     }
   }
   return node
@@ -82,7 +83,7 @@ function isTest(d) {
       && d.value.position.isTest)))
 }
 
-function findimpactedTests(node, max_depth = Infinity) {
+function findimpactedTests(node, max_depth = 5) {
   // TODO do not rely on d3 to move in the graph
   const r = []
   const stack = [node]
@@ -124,23 +125,23 @@ function graphNodesToSecenario(graphNodes, repo, commitIdBefore, commitIdAfter) 
   const impactedTests = findimpactedTests(node)
   const root = findRoot(node)[0] // TODO generalize all get(0), a move is a 1 to 1 ref but an extract is apriori a n to n.
   // TODO change from and to semantic to something like removed, inserted, considered. As left side of a diff is the "from" and rigth is the "to" 
-  if (root.evolution.type === "Move Method") {
+  if (root.evolutions[0].type === "Move Method") {
     return {
       type: 'move', what: 'method',
-      from: node2diff(root.evolution.before[0],undefined, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from'),
-      to: node2diff(root.evolution.after[0],undefined, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to'),
+      from: node2diff(root.evolutions[0].before[0],undefined, repo, root.evolutions[0].commitIdBefore, root.evolutions[0].commitIdAfter, 'before', 'marked-evo-from'),
+      to: node2diff(root.evolutions[0].after[0],undefined, repo, root.evolutions[0].commitIdBefore, root.evolutions[0].commitIdAfter, 'after', 'marked-evo-to'),
       impacts:
-        impactedTests.slice(0, 3).map(x => node2diff(x.value.position || x.value, x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
+        impactedTests.slice(0, 3).map(x => node2diff(x.value.position || x.value, x, repo, root.evolutions[0].commitIdBefore, root.evolutions[0].commitIdAfter, 'before', 'marked-impacted'))
     }
   } else {
     return {
       type: UNSPEC_TYPE, what: UNSPEC_WHAT,
-      before: root.evolution.before.slice(0, 6).map(x =>
-        node2diff(x, x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-evo-from')),
-      after: root.evolution.after.slice(0, 6).map(x =>
-        node2diff(x, x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'after', 'marked-evo-to')),
+      before: root.evolutions[0].before.slice(0, 6).map(x =>
+        node2diff(x, x, repo, root.evolutions[0].commitIdBefore, root.evolutions[0].commitIdAfter, 'before', 'marked-evo-from')),
+      after: root.evolutions[0].after.slice(0, 6).map(x =>
+        node2diff(x, x, repo, root.evolutions[0].commitIdBefore, root.evolutions[0].commitIdAfter, 'after', 'marked-evo-to')),
       impacts:
-        impactedTests.slice(0, 6).map(x => node2diff(x.value.position || x.value, x, repo, root.evolution.commitIdBefore, root.evolution.commitIdAfter, 'before', 'marked-impacted'))
+        impactedTests.slice(0, 6).map(x => node2diff(x.value.position || x.value, x, repo, root.evolutions[0].commitIdBefore, root.evolutions[0].commitIdAfter, 'before', 'marked-impacted'))
     }
   }
 }

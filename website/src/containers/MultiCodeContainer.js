@@ -15,12 +15,12 @@ function mapStateToProps(state) {
       instance: inst,
       type: "move",
       what: "method",
-      from: { repo: inst.repo, commitId: inst.before, path: "src/main/java/spoon/refactoring/Refactoring.java", ranges: [{ start: 1, end: 2, marking: "marked-evo-from" }] },
-      to: { repo: inst.repo, commitId: inst.after, path: "src/main/java/spoon/refactoring/Refactoring.java", ranges: [{ start: 1, end: 2, marking: "marked-evo-to" }] },
+      from: { repo: inst.repo, commitId: inst.commitIdBefore, path: "src/main/java/spoon/refactoring/Refactoring.java", ranges: [{ start: 1, end: 2, marking: "marked-evo-from" }] },
+      to: { repo: inst.repo, commitId: inst.commitIdAfter, path: "src/main/java/spoon/refactoring/Refactoring.java", ranges: [{ start: 1, end: 2, marking: "marked-evo-to" }] },
       impacts: [
-        { repo: inst.repo, commitId: inst.before, path: "/src/test/java/spoon/test/refactoring/RefactoringTest.java", ranges: [{ start: 10, end: 12, marking: "marked-impacted" }] }
+        { repo: inst.repo, commitId: inst.commitIdBefore, path: "/src/test/java/spoon/test/refactoring/RefactoringTest.java", ranges: [{ start: 10, end: 12, marking: "marked-impacted" }] }
       ]
-    },//getCode(state),
+    },
     mode: mode,
     error: (getParseResult(state) || {}).error,
   };

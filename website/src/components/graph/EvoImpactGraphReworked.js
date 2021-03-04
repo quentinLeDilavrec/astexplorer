@@ -335,21 +335,21 @@ export default class EvoImpactGraphReworked extends Component {
       }
       const roots = {}
       if (x.evolutions) {
-        for (const evo of x.evolutions[0].refactorings) {
-          evo.before = evo.leftSideLocations
-          evo.after = evo.rightSideLocations
+        for (const evo of x.evolutions) {
+          evo.before = evo.before
+          evo.after = evo.after
           evo.commitIdAfter = x.commitIdAfter
-          for (const element of evo.leftSideLocations) {
-            if (element.filePath === "core/src/main/java/com/graphhopper/storage/GraphBuilder.java") {
+          for (const element of evo.before) {
+            if (element.file === "core/src/main/java/com/graphhopper/storage/GraphBuilder.java") {
               if (element.start === 3563 && element.end === 3575) {
                 console.log(element)
               }
             }
-            const key = element.filePath + ":" + element.start + "-" + element.end
+            const key = element.file + ":" + element.start + "-" + element.end
             let rrr = rangesMap[key]
             if (rrr === undefined) {
               rrr = {
-                file: element.filePath,
+                file: element.file,
                 start: element.start,
                 end: element.end,
                 id: nodes.length
@@ -360,17 +360,20 @@ export default class EvoImpactGraphReworked extends Component {
             }
             evo.commitIdBefore = rrr.commitId || evo.commitIdBefore || x.commitIdBefore
             element.commitId = rrr.commitId || element.commitId || evo.commitIdBefore
-            element.file = element.filePath
-            rrr.evolution = evo
+            element.file = element.file
+            if (rrr.evolutions===undefined || !(rrr.evolutions.length >= 0)) {
+              rrr.evolutions = []
+            }
+            rrr.evolutions = [...rrr.evolutions, evo]
             rrr.isRoot = true
             if (roots[key] === undefined) {
               data.roots.push(rangesMap[key].id)
               roots[key] = true
             }
           }
-          for (const element of evo.leftSideLocations) {
+          for (const element of evo.before) {
             element.commitId = element.commitId || x.commitIdAfter
-            element.file = element.filePath
+            element.file = element.file
           }
         }
       }
@@ -415,8 +418,8 @@ export default class EvoImpactGraphReworked extends Component {
       const zetgzerfg = {}
       graph.roots.forEach((x, i) => zetgzerfg[x] = i)
       const graphLayout = d3.forceSimulation(graph.nodes)
-        .force("charge", d3.forceManyBody().distanceMin(1000)
-          .strength(d => isTest(d) ? (d.isTest ? -40 : -40) : -500))
+        .force("charge", d3.forceManyBody().distanceMin(2000)
+          .strength(d => isTest(d) ? (d.isTest ? -60 : -60) : -1000))
         // .force("y", d3.forceY(d => {
         //   if (isTest(d)) {
         //     return 300 * d.depth - 50
@@ -427,15 +430,20 @@ export default class EvoImpactGraphReworked extends Component {
         //   return zetgzerfg[d.root] * 1000
         // }).strength(d => d.isRoot ? (1) : .2))
         .force("collide",
-          d3.forceCollide().radius(NODE_SIZE * 4).strength(.9).iterations(40)
-          // d3.forceCollide(NODE_SIZE*100)
+          d3.forceCollide().radius(NODE_SIZE*10).strength(.99).iterations(40)
+          // d3.forceCollide()
           // .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : d.isRoot ? 20 :10) * NODE_SIZE*10)
           // .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : 1)
           // .radius(NODE_SIZE*100).strength(1)
         )
         .force("link", d3.forceLink(graph.links)
           .id(function (d) { return d.id; })
-          .distance(d => isTest(d) ? 10 : 40).strength(.1));
+          .distance(d=> {
+            if (d.evolutions===undefined || d.evolutions.length===undefined || d.evolutions.length===0) {
+              return 200
+            }
+            return isTest(d) ? 10 : 40
+          }).strength(.5));
 
 
       const adjlist = [];
@@ -459,16 +467,29 @@ export default class EvoImpactGraphReworked extends Component {
           // .force("charge", d3.forceManyBody().distanceMin(1000)
           //   .strength(d => 5000))
           .force("charge", d3.forceManyBody().distanceMax(1000)
-            .strength(d => -2000))
+            .strength(d => -1000))
+          .force("collide",
+            d3.forceCollide().radius(d => {
+              if (d.evolutions===undefined || d.evolutions.length===undefined || d.evolutions.length===0) {
+                return NODE_SIZE * 2
+              }
+              return NODE_SIZE * 3
+            }).strength(.85)
+             )
           .force("link", d3.forceLink(graph.links)
             .id(function (d) { return d.id; })
-            .distance(d => isTest(d) ? 10 : 40).strength(.8))
+            .distance(d => {
+              if (d.evolutions===undefined || d.evolutions.length===undefined || d.evolutions.length===0) {
+                return NODE_SIZE * 1.5
+              }
+              return NODE_SIZE * 2
+            }).strength(.7))
         // .force("collision", d3.forceCollide(1)
         //   .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : d.isRoot ? 20 :10) * NODE_SIZE)
         //   .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
         // )
         graphLayout.restart();
-      }, 5000)
+      }, 1000)
 
       graphLayout
         .on("tick", ticked)
@@ -498,7 +519,7 @@ export default class EvoImpactGraphReworked extends Component {
       filter.append("feComposite")
         .attr("in", "SourceGraphic");
 
-      const NODE_SIZE = 40
+      const NODE_SIZE = 50
 
       const links = container.append("g").attr("class", "links")
         .selectAll("line")
@@ -533,7 +554,7 @@ export default class EvoImpactGraphReworked extends Component {
       function addContent(/** @type {d3.Selection<SVGGElement, any, SVGGElement, any>} */node) {
         const evo_nodes = node
           .filter(d => {
-            if (typeof d.evolution !== "object") {
+            if (d.evolutions===undefined || d.evolutions.length===undefined || d.evolutions.length===0) {
               return false
             }
             return true
@@ -542,30 +563,32 @@ export default class EvoImpactGraphReworked extends Component {
           .append("text")
           .style("transform-origin", "center")
           .style("font-weight", 900)
-          .style("font-size", "120px")
+          .style("font-size", "80px")
           .style("font-family", "sans-serif")
           .attr("fill", d => {
             return isTest(d) ? "orange" : "green"
           })
           .text(d => {
-            if (d.evolution.type === "Move Method") {
-              return "MM"
-            }
-            try {
-              return d.evolution.type.split(" ").map(x => x[0]).join("")
-            } catch (error) {
-              return "O"
-            }
+            return d.evolutions.map(x => {
+              if (x.type === "Move Method") {
+                return "MM"
+              }
+              try {
+                return x.type.split(" ").map(x => x[0]).join("")
+              } catch (error) {
+                return "O"
+              }
+            }).join("-")
           })
           .attr("dominant-baseline", "middle")
           .attr("text-anchor", "middle")
           .append("svg:title")
           .text(function (d, i) {
-            return d.evolution.type + "\n" + (d.value && d.value.start) + "," + (d.value && d.value.end)
+            return "" + d.evolutions.map(x => x.type) + "\n" + (d.value && d.value.start) + "," + (d.value && d.value.end)
           })
         const other_nodes = node
           .filter(d => {
-            if (typeof d.evolution !== "object") {
+            if (d.evolutions===undefined || d.evolutions.length===undefined || d.evolutions.length===0) {
               return true
             }
             return false
@@ -731,7 +754,7 @@ export default class EvoImpactGraphReworked extends Component {
 
       function dblclick(d) {
         // TODO make it available to rest of app
-        if (d.evolution) {
+        if (d.evolutions!==undefined && d.evolutions.length > 0) {
           _this.props.onSelection({
             filePath: d.value.file,
             commitId: d.value.commitId,

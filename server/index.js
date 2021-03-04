@@ -30,7 +30,7 @@ if (process.env.STATIC) {
 const PORT = process.env.PORT || 8080;
 app.listen(
   PORT,
-  // 'localhost',
+  "0.0.0.0",// 'localhost',
   () => {
     console.log(`Server listening on port ${PORT}!`);
   }

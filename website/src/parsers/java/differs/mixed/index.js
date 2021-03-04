@@ -1,10 +1,11 @@
-// import pkg from 'json-to-ast/package.json';
 import defaultDifferInterface from '../../../utils/defaultDifferInterface';
+import RefactoringTypes from "../../../../coevolutionService/utils/RefactoringTypes.json";
 import React from 'react';
 import SettingsRenderer from '../../../utils/SettingsRenderer';
-const ID = 'GumtreeSpoon';
+
+const ID = 'Mixed';
 const VERSION = '0.0.0';
-const HOMEPAGE = 'https://github.com/SpoonLabs/gumtree';
+const HOMEPAGE = 'https://github.com/qledilav/java-tests-coevolution';
 
 export default {
   ...defaultDifferInterface,
@@ -12,9 +13,9 @@ export default {
   displayName: ID,
   version: VERSION,
   homepage: HOMEPAGE,
-  locationProps: new Set(['loc', 'start', 'end', 'side']),
+  locationProps: new Set(['loc', 'start', 'end', 'side', 'repository', 'astPath', 'commitId']),
   typeProps: new Set(['type', 'codeElementType'/*, 'node type'*/]),
-  // _ignoredProperties: new Set(['loc', 'side']),
+  _ignoredProperties: new Set(['side', 'value']),
 
   // opensByDefault(_node, _key) {
   //   return _key === "actions";
@@ -24,8 +25,8 @@ export default {
     const res = evolutions;
     res.forEach(addSide)
     res.forEach(
-      ({left,right, content},i) => 
-      res[i] = {left, right, ...content})
+      ({before,after, content, type},i) => 
+      res[i] = {type, before, after, ...content})
     return res
   },
 
@@ -49,9 +50,9 @@ export default {
       if (RefactoringTypes2.hasOwnProperty(key)) {
         const element = RefactoringTypes2[key]
         evolutions[key] =
-          element.before.some(x => x.keys.method || x.keys.class) &&
-          !element.before.some(x => x.many) &&
-          !element.after.some(x => x.many)
+          element.left.some(x => x.keys.method || x.keys.class) &&
+          !element.left.some(x => x.many) &&
+          !element.right.some(x => x.many)
       }
     }
     const keywords = {}
@@ -185,45 +186,8 @@ function mapObject(obj, fct) {
 }
 
 function addSide(op) { // TODO remove it
-  op.left.map(x => x.side = "left")
-  op.right.map(x => x.side = "right")
-}
-
-let RefactoringTypes = {
-  "INSERT": {
-    "left": [
-      {
-        "description": "before"
-      }
-    ],
-    "right": [
-      {
-        "description": "after"
-      }
-    ]
-  }, "DELETE": {
-    "left": [
-      {
-        "description": "before"
-      }
-    ],
-    "right": [
-      {
-        "description": "after"
-      }
-    ]
-  }, "MOVE": {
-    "left": [
-      {
-        "description": "before"
-      }
-    ],
-    "right": [
-      {
-        "description": "after"
-      }
-    ]
-  }
+  op.before.map(x => x.side = "left")
+  op.after.map(x => x.side = "right")
 }
 
 console.log('RefactoringTypes', RefactoringTypes)
@@ -262,9 +226,9 @@ for (const key in RefactoringTypes) {
     FilteredRefactorings[key] = RefactoringTypes[key]
   }
 }
-console.log('FilteredActions', FilteredRefactorings, JSON.stringify(FilteredRefactorings))
+console.log('FilteredRefactorings', FilteredRefactorings, JSON.stringify(FilteredRefactorings))
 
-console.log('FilteredActions', FilteredRefactorings, JSON.stringify(Object.keys(FilteredRefactorings)))
+console.log('FilteredRefactorings', FilteredRefactorings, JSON.stringify(Object.keys(FilteredRefactorings)))
 
 const RefactoringsByKeyword = {}
 
@@ -290,68 +254,4 @@ for (const key in RefactoringTypes2) {
   }
 }
 
-console.log('ActionsByKeyword', RefactoringsByKeyword, JSON.stringify(Object.keys(RefactoringsByKeyword)))
-
-// export default {
-//   ...defaultDifferInterface,
-//   id: ID,
-//   displayName: ID,
-//   version: VERSION,
-//   homepage: HOMEPAGE,
-//   locationProps: new Set(['loc', 'start', 'end', 'side']),
-//   typeProps: new Set(['type'/*, "node type"*/]),
-//   // _ignoredProperties: new Set(['_side']),
-
-//   // opensByDefault(_node, _key) {
-//   //   return _key==="actions";
-//   // },
-
-//   loadDiffer(callback) {
-
-//     const url = PARSER_SERVICE_URL;
-//     callback(function gumtreeDiffHandler(before, after) {
-//       const xhr = new XMLHttpRequest();
-//       xhr.open("PUT", url);// + '?old=' + btoa(old) + '&new=' + btoa(neww));
-//       xhr.withCredentials = true;
-//       // res.header("Content-Type", "application/json");
-//       xhr.setRequestHeader('Access-Control-Allow-Origin', 'http://131.254.17.96:8087');
-//       xhr.setRequestHeader('Access-Control-Allow-Credentials', 'true');
-//       // xhr.setRequestHeader('Content-Type', 'text/plain');
-//       // xhr.setRequestHeader('Content-Type', "application/json; charset=utf-8");
-//       xhr.setRequestHeader('Content-Type', "application/json");
-//       return new Promise(
-//         (resolve, reject) => {
-//           xhr.onload = (e) => {
-//             if (xhr.response === "<html><body><h2>404 Not found</h2></body></html>") {
-//               console.error(xhr.response)
-//               // reject(r)
-//               return
-//             }
-//             const r = JSON.parse(xhr.response)
-//             if (r.error) {
-//               reject(r)
-//             } else {
-//               const o0 = r.diff;
-//               window.reloadGraph(r.impact || { perRoot: [], roots: [], tests: [] });
-//               const o = o0.actions;
-//               o.map(addSide)
-//               resolve(o);
-//             }
-//           }
-//           // xhr.send(btoa(before) + '\n' + btoa(after));
-//           // xhr.send(JSON.stringify({before:btoa(before), after:btoa(after)}));
-//           xhr.send(JSON.stringify(window.currentTarget));
-//         });
-//     });
-//   },
-
-//   async diff(differ, old, neww) {
-//     return await differ(old, neww)
-//   },
-
-//   nodeToRange(node) {
-//     if (typeof node.start === 'number') {
-//       return [node.start, node.end + 1];
-//     }
-//   },
-// };
+console.log('RefactoringsByKeyword', RefactoringsByKeyword, JSON.stringify(Object.keys(RefactoringsByKeyword)))

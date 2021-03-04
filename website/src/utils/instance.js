@@ -53,8 +53,8 @@ for (const key in RefactoringTypes) {
   if (RefactoringTypes.hasOwnProperty(key)) {
     const element = RefactoringTypes[key];
     const o = {
-      before: element.left.map(betterSide),
-      after: element.right.map(betterSide),
+      left: element.left.map(betterSide),
+      right: element.right.map(betterSide),
     }
     RefactoringTypes2[key] = o
   }
@@ -66,9 +66,9 @@ const FilteredRefactorings = {}
 for (const key in RefactoringTypes) {
   if (RefactoringTypes.hasOwnProperty(key)) {
     const element = RefactoringTypes2[key];
-    if (!element.before.some(x => x.keys.method || x.keys.class)) continue
-    if (element.before.some(x => x.many)) continue
-    if (element.after.some(x => x.many)) continue
+    if (!element.left.some(x => x.keys.method || x.keys.class)) continue
+    if (element.left.some(x => x.many)) continue
+    if (element.right.some(x => x.many)) continue
     FilteredRefactorings[key] = RefactoringTypes[key]
   }
 }
