@@ -122,7 +122,9 @@ module.exports = Object.assign({
       }),
     ],
   },
-
+  resolve: {
+    extensions: [".wasm", ".mjs", ".ts",".tsx",".js",".jsx", ".txt", ".json", ".css", "wof", ".ttf", ".svg"],
+  },
   module: {
     rules: [
       {
@@ -130,8 +132,13 @@ module.exports = Object.assign({
         exclude: /node_modules/,
         loader: 'raw-loader',
       },
+      // {
+      //   test: /\.(tsx?)$/,
+      //   use: "ts-loaded",
+      //   exclude: "/node_modules/",
+      // },
       {
-        test: /\.(jsx?|mjs)$/,
+        test: /\.(jsx?|tsx?|mjs)$/,
         type: 'javascript/auto',
         include: [
           // To transpile our version of acorn as well as the one that
@@ -192,9 +199,11 @@ module.exports = Object.assign({
               },
             ],
             require.resolve('@babel/preset-react'),
+            require.resolve('@babel/preset-typescript'),
           ],
           plugins: [
             require.resolve('@babel/plugin-transform-runtime'),
+            require.resolve('@babel/plugin-proposal-class-properties'),
           ],
         },
       },

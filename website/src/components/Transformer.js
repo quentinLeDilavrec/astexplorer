@@ -8,7 +8,7 @@ import TransformOutput from './TransformOutput';
 import PrettierButton from './buttons/PrettierButton';
 
 function resize() {
-  PubSub.publish('PANEL_RESIZE');
+  PubSub.publish('PANEL_RESIZE',undefined);
 }
 
 export default function Transformer(props) {

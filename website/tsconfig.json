@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+      "jsx": "react",
+      "module": "CommonJS",
+      "outDir": "./build/",
+      "lib": ["ES6", "WebWorker", "DOM"],
+      "preserveConstEnums": true,
+      "removeComments": true,
+      "sourceMap": true,
+      "target": "es5",
+      "allowJs": true,
+      "checkJs": true,
+      "noUncheckedIndexedAccess": true,
+      "strictNullChecks": true,
+      "esModuleInterop": true,
+    },
+    "include": [
+      "./src/**/*"
+    ],
+    "exclude": ["node_modules", "build"]
+  }

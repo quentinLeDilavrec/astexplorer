@@ -14,6 +14,7 @@ const {useReducer, useMemo, useRef, useLayoutEffect} = React;
 const STORAGE_KEY = 'tree_settings';
 
 function initSettings() {
+  // @ts-ignore
   const storedSettings = global.localStorage.getItem(STORAGE_KEY);
   return storedSettings ?
     JSON.parse(storedSettings) :
@@ -29,6 +30,7 @@ function initSettings() {
 function reducer(state, element) {
   const newState = {...state, [element.name]: element.checked};
 
+  // @ts-ignore
   global.localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
   logEvent(
     'tree_view_settings',
@@ -56,13 +58,13 @@ export default function TreeDiff({parseResult, position}) {
     () => treeAdapterFromParseResult(parseResult, settings),
     [parseResult.treeAdapter, settings],
   );
+  /** @type {React.MutableRefObject<any>} */
   const rootElement = useRef();
 
   focusNodes('init');
   useLayoutEffect(() => {
     focusNodes('focus', rootElement);
   });
-  treeAdapter.coucou="aaa";
 
   return (
     <div className="tree-visualization container">
@@ -82,7 +84,7 @@ export default function TreeDiff({parseResult, position}) {
           </span>
         ))}
       </div>
-      <ul ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT');}}>
+      <ul ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT', undefined);}}>
         <SelectedNodeProvider>
           <Element
             value={parseResult.ast}

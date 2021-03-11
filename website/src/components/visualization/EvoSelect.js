@@ -1,4 +1,4 @@
-import Element from './tree/Element';
+import EvolutionsContainer from './evo/Evolution';
 import PropTypes from 'prop-types';
 import React from 'react';
 import PubSub from 'pubsub-js';
@@ -52,7 +52,7 @@ function makeCheckbox(name, settings, updateSettings) {
   );
 }
 
-export default function Tree({parseResult, position}) {
+export default function EvoSelect({parseResult, position, onToggleEvo, selectedEvos}) {
   const [settings, updateSettings] = useReducer(reducer, null, initSettings);
   const treeAdapter = useMemo(
     () => treeAdapterFromParseResult(parseResult, settings),
@@ -84,23 +84,28 @@ export default function Tree({parseResult, position}) {
           </span>
         ))}
       </div>
-      <ul ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT', undefined);}}>
+      <div ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT', undefined);}}>
         <SelectedNodeProvider>
-          <Element
+          <EvolutionsContainer
             value={parseResult.ast}
             level={0}
             treeAdapter={treeAdapter}
             autofocus={settings.autofocus}
             position={position}
-            diff={false}
+            diff={true}
+            selectableEvo={true}
+            onToggleEvo={onToggleEvo}
+            selectedEvos={selectedEvos}
           />
         </SelectedNodeProvider>
-      </ul>
+      </div>
     </div>
   );
 }
 
-Tree.propTypes = {
+EvoSelect.propTypes = {
   parseResult: PropTypes.object,
   position: PropTypes.oneOfType([PropTypes.number,PropTypes.object]),
+  onToggleEvo: PropTypes.func,
+  selectedEvos: PropTypes.array,
 };

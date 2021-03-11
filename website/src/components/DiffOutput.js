@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import cx from 'classnames';
-import visualizations from './visualization';
+import visualizations0 from './visualization';
+import {PT} from '../containers/DiffOutputContainer'
 
 const { useState } = React;
 
@@ -23,10 +24,20 @@ function betterLoadingDisplay(time, status) {
   return <i className="fa fa-lg fa-spinner fa-pulse" title={status}></i>;
 }
 
-export default function DiffOutput({
-  position = null, differ = {},
-  status='?',
-  diffAST = {} }) {
+/** @type {any[]} */
+const visualizations  = visualizations0
+
+/**
+ * 
+ * @param {PT} props
+ */
+export default function DiffOutput(props) {
+  const {
+    position = null, differ = {},
+    status,
+    diffAST, 
+    onToggleEvo, selectedEvos,
+   } = props
   const [selectedOutput, setSelectedOutput] = useState(0);
   const { ast = null } = diffAST;
   let output;
@@ -41,7 +52,9 @@ export default function DiffOutput({
         {
           React.createElement(
             visualizations[selectedOutput],
-            { parseResult: diffAST, position },
+            { parseResult: diffAST, position,
+              onToggleEvo, selectedEvos, 
+            },
           )
         }
       </ErrorBoundary>
@@ -53,7 +66,8 @@ export default function DiffOutput({
       <button
         key={index}
         value={index}
-        onClick={event => setSelectedOutput(event.target.value)}
+        onClick={(/** @type {any} */event) => {
+          return setSelectedOutput(event.target.value)}}
         className={cx({
           active: selectedOutput == index,
         })}>
@@ -66,7 +80,7 @@ export default function DiffOutput({
       <div className="toolbar">
         {buttons}
         <span className="time">
-          {betterLoadingDisplay(formatTime(diffAST.time), status)}
+          {betterLoadingDisplay(formatTime(diffAST.time), status || '?')}
         </span>
       </div>
       {output}

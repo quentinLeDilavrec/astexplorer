@@ -261,11 +261,12 @@ export default class DiffEditor extends React.Component {
     if (before.focus && after.focus) {
       this.codeMirror // TODO unsync diff viewer
     }
-    if (before.focus) {
-      this.markIt(this.codeMirror.leftOriginal(), before.ranges);
+    debugger
+    if (before.focus || before.start !== undefined) {
+      this.markIt(this.codeMirror.leftOriginal(), before.ranges || [before]);
     }
-    if (after.focus) {
-      this.markIt(this.codeMirror.editor(), after.ranges);
+    if (after.focus || after.start !== undefined) {
+      this.markIt(this.codeMirror.editor(), after.ranges || [after]);
     }
     return r;
   }

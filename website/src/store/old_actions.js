@@ -37,6 +37,7 @@ export const DONE_LOADING_INSTANCE = 'DONE_LOADING_INSTANCE';
 export const CLEAR_INSTANCE = 'CLEAR_INSTANCE';
 export const SET_INSTANCE = 'SET_INSTANCE';
 export const SET_EVO_IMPACT_STATUS = 'SET_EVO_IMPACT_STATUS';
+/** @constant */
 export const SET_DIFF_STATUS = 'SET_DIFF_STATUS';
 
 
@@ -172,11 +173,12 @@ export function setKeyMap(keyMap) {
  * @property {string} commitId
  * 
  * @typedef {InstantInstanciationData|EvoInstanciationData} InstanciationData
+ * 
  */
 
 /**
  * 
- * @param {InstanciationData} newInstance 
+ * @param {import('../utils/instance').Instance} newInstance 
  */
 export function loadInstance(newInstance) {
   return { type: LOAD_INSTANCE, instance: newInstance }
@@ -219,6 +221,7 @@ export function setDiffResult(result) {
       ast: diff || null,
       error: error || null,
       treeAdapter: treeAdapter || null,
+      selectedEvos: diff && Array.isArray(diff) ? diff.map(x=>false) : []
     }
   }
 }
@@ -240,3 +243,62 @@ export function setEvoImpactResult(result) {
     }
   }
 }
+let a = null;
+
+export function setCoEvoStatus(status = 'started') {
+  /** @constant */
+  const aa = { type: SET_DIFF_STATUS, status }
+  return aa
+}
+
+/**
+ * 
+ * @param {{time:number, diff:Object, treeAdapter:any}|{error:Error}} result 
+ */
+const setCoEvoResult = (result) => {
+  const { time, diff, treeAdapter, error } = result
+  return {
+    type: SET_DIFF_RESULT, 
+    result: {
+      time: time || null,
+      status: 'done',
+      ast: diff || null,
+      error: error || null,
+      treeAdapter: treeAdapter || null,
+      selectedEvos: diff && Array.isArray(diff) ? diff.map(x=>false) : []
+    }
+  }
+}
+
+/**
+ * @typedef {ReturnType<setCoEvoResult> | ReturnType<setCoEvoStatus>} A
+ */
+
+const actioners = {
+  CoEvolution: {
+    Result: setCoEvoResult,
+    setStatus: setCoEvoStatus,
+  },
+  Evolution: {
+    setResult: setDiffResult,
+    setStatus: setDiffStatus,
+    setSettings: setDifferSettings,
+  },
+  Impact: {
+    setResult: setEvoImpactResult,
+    setStatus: setEvoImpactStatus,
+  },
+  Instance: {
+    load : loadInstance,
+    startLoading : startLoadingInstance,
+    doneLoading : doneLoadingInstance,
+    clear : clearInstance,
+    set : setInstance,
+  },
+  Save: {
+  },
+  Snippet: {
+  },
+}
+
+export default actioners

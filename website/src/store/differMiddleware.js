@@ -1,11 +1,10 @@
 // @ts-check
 import { getDifferSettings, getCode, getDiffer, getDiffCode, getInstance } from './selectors';
 import { ignoreKeysFilter, locationInformationFilter, functionFilter, emptyKeysFilter, typeKeysFilter } from '../core/TreeAdapter.js';
-import { SET_CURSOR, SET_DIFF_RESULT } from './actions';
-import * as actions from './actions';
-import RemoteDifferService from '../coevolutionService/differ';
+import actions from './actions';
 import RemoteEvolutionService from '../coevolutionService/evolution';
 import RemoteImpactService from '../coevolutionService/impact';
+import RemoteCoEvolutionService from '../coevolutionService/coevolution';
 
 function diff(differ, oldCode, newCode, differSettings) {
   if (!differ._promise) {
@@ -29,12 +28,12 @@ async function diff2(differ, { instance, oldcode = null, newCode = null }, diffe
       cases: instance.cases,
       settings: differSettings || differ.getDefaultOptions(),
     }
-    debugger
     if (instance.commitIdBefore)
       param.commitIdBefore = instance.commitIdBefore
     return {
       evolutionP: RemoteEvolutionService(differ, param),
       impactP: RemoteImpactService(differ, param),
+      coevolutionP: RemoteEvolutionService(differ, param),
     }
   } else {
     throw new Error("no instance differ not implemented yet")
@@ -54,12 +53,15 @@ function compareInstances(i1, i2) {
     i1.after !== i2.after)
 }
 
-export default store => next => action => {
+export default 
+    (/** @type {import('redux').MiddlewareAPI} */store) => 
+    (/** @type {import('redux').Dispatch} */next) => 
+    (/** @type {import('./actions').allActions} */action) => {
   const oldState = store.getState();
   next(action);
-  if (action.type === actions.SET_CURSOR &&
-    action.type === actions.SET_EVO_IMPACT_STATUS &&
-    action.type === actions.SET_DIFF_STATUS) {
+  if (action.type === 'Cursor/set' ||
+    action.type === 'Impacts/Status/set' ||
+    action.type === 'Evolutions/Status/set') {
     return;
   }
   const newState = store.getState();
@@ -85,21 +87,23 @@ export default store => next => action => {
       if (!newDiffer || newInstance == null) {
         return;
       }
-      next(actions.setDiffStatus('started'));
-      next(actions.setEvoImpactStatus('started'));
+      next(actions['Evolutions/Status/set']('started'));
+      next(actions['Impacts/Status/set']('started'));
+      next(actions['CoEvolutions/Status/set']('started'));
       const start = Date.now();
       const errorHandler =
         (/** @type Error */ error) => {
           console.error(error); // eslint-disable-line no-console
-          next(actions.setDiffStatus('error'));
-          next(actions.setEvoImpactStatus('error'));
+          next(actions['Evolutions/Status/set']('started'));
+          next(actions['Impacts/Status/set']('started'));
+          next(actions['CoEvolutions/Status/set']('started'));
           next(
-            actions.setDiffResult({ error })
+            actions['Evolutions/Result/set']({ error })
           );
         }
       return diff2(newDiffer, { instance: newInstance }, newDifferSettings).then(
         // return diff(newDiffer, newCodeBefore, newCode, newDifferSettings).then(
-        ({ evolutionP, impactP }) => {
+        ({ evolutionP, impactP, coevolutionP }) => {
           const treeAdaptAnduptDetect = () => {
             // Did anything change in the meantime?
             const newnewstate = store.getState()
@@ -122,6 +126,7 @@ export default store => next => action => {
                 nodeToRange: newDiffer.nodeToRange.bind(newDiffer),
                 nodeToName: newDiffer.getNodeName.bind(newDiffer),
                 walkNode: newDiffer.forEachProperty.bind(newDiffer),
+                testy: (x) => console.log(x),
                 filters: [
                   ignoreKeysFilter(newDiffer._ignoredProperties),
                   functionFilter(),
@@ -134,22 +139,32 @@ export default store => next => action => {
             return treeAdapter
           };
           evolutionP.then(x => {
-            next(actions.setDiffStatus('received'));
+            next(actions['Evolutions/Status/set']('received'));
             const treeAdapter = treeAdaptAnduptDetect()
             if (treeAdapter !== null) {
               next(
-                actions.setDiffResult({ time: Date.now() - start, diff: x.value, treeAdapter })
+                actions['Evolutions/Result/set']({ time: Date.now() - start, diff: x.value, treeAdapter })
               );
 
             }
           }, errorHandler)
           impactP.then(x => {
-            next(actions.setEvoImpactStatus('received'));
+            next(actions['Impacts/Status/set']('received'));
             const treeAdapter = treeAdaptAnduptDetect()
             if (treeAdapter !== null) {
               next(
-                actions.setEvoImpactResult({ time: Date.now() - start, impact: x.value, treeAdapter, uuid: x.uuid })
+                actions['Impacts/Result/set']({ time: Date.now() - start, impact: x.value, treeAdapter, uuid: x.uuid })
               );
+            }
+          }, errorHandler)
+          coevolutionP.then(x => {
+            next(actions['CoEvolutions/Status/set']('received'));
+            const treeAdapter = treeAdaptAnduptDetect()
+            if (treeAdapter !== null) {
+              next(
+                actions['CoEvolutions/Result/set']({ time: Date.now() - start, diff: x.value, treeAdapter })
+              );
+
             }
           }, errorHandler)
         }, errorHandler,

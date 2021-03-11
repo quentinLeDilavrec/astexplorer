@@ -1,9 +1,10 @@
 import {connect} from 'react-redux';
-import {setCode, setCursor} from '../store/actions';
+import actions from '../store/actions';
 import Editor from '../components/Editor';
 import {getCode, getParser, getParseResult, getKeyMap} from '../store/selectors';
 
 function mapStateToProps(state) {
+  debugger
   return {
     keyMap: getKeyMap(state),
     value: getCode(state),
@@ -15,9 +16,9 @@ function mapStateToProps(state) {
 function mapDispatchToProps(dispatch) {
   return {
     onContentChange: ({value, cursor}) => {
-      dispatch(setCode({code: value, cursor}));
+      dispatch(actions['setCode']({code: value, cursor}));
     },
-    onActivity: cursor => dispatch(setCursor(cursor)),
+    onActivity: cursor => dispatch(actions['Cursor/set'](cursor)),
   };
 }
 

@@ -1,17 +1,5 @@
 import {connect} from 'react-redux';
-import {
-  save,
-  selectCategory,
-  openSettingsDialog,
-  openShareDialog,
-  selectTransformer,
-  hideTransformer,
-  selectDiffer,
-  hideDiff,
-  setParser,
-  reset,
-  setKeyMap,
-} from '../store/actions';
+import actions from '../store/actions';
 import Toolbar from '../components/Toolbar';
 import * as selectors from '../store/selectors';
 import {logEvent} from '../utils/logger';
@@ -38,50 +26,50 @@ function mapStateToProps(state) {
 function mapDispatchToProps(dispatch) {
   return {
     onParserChange: parser => {
-      dispatch(setParser(parser));
+      dispatch(actions['Parse/select'](parser));
       logEvent('parser', 'select', parser.id);
     },
     onCategoryChange: category => {
-      dispatch(selectCategory(category));
+      dispatch(actions.selectCategory(category));
       logEvent('category', 'select', category.id);
     },
     onParserSettingsButtonClick: () => {
-      dispatch(openSettingsDialog());
+      dispatch(actions.openSettingsDialog());
       logEvent('parser', 'open_settings');
     },
     onDifferSettingsButtonClick: () => {
-      dispatch(openSettingsDialog('evolve'));
+      dispatch(actions.openSettingsDialog('evolve'));
       logEvent('differ', 'open_settings');
     },
     onShareButtonClick: () => {
-      dispatch(openShareDialog());
+      dispatch(actions.openShareDialog());
       logEvent('ui', 'open_share');
     },
     onTransformChange: transformer => {
-      dispatch(transformer ? selectTransformer(transformer) : hideTransformer());
+      dispatch(transformer ? actions['Transformer/select'](transformer) : actions['Transformer/hide']());
       if (transformer) {
         logEvent('tool', 'select', transformer.id);
       }
     },
     onDiffChange: diff => {
-      dispatch(diff ? selectDiffer(diff) : hideDiff());
+      dispatch(diff ? actions['Evolutions/select'](diff) : actions.hideOld());
       if (diff) {
         logEvent('tool', 'select', diff.id);
       }
     },
     onKeyMapChange: keyMap => {
-      dispatch(setKeyMap(keyMap))
+      dispatch(actions.setKeyMap(keyMap))
       if (keyMap) {
         logEvent('keyMap', keyMap);
       }
     },
-    onSave: () => dispatch(save(false)),
-    onFork: () => dispatch(save(true)),
+    onSave: () => dispatch(actions['Save/start'](false)),
+    onFork: () => dispatch(actions['Save/start'](true)),
     onNew: () => {
-      if (global.location.hash) {
-        global.location.hash = '';
+      if (document.location.hash) {
+        document.location.hash = '';
       } else {
-        dispatch(reset());
+        dispatch(actions.reset());
       }
     },
   };

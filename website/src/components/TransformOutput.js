@@ -10,7 +10,9 @@ import stringify from 'json-stringify-safe';
 function transform(transformer, transformCode, code) {
   // Transforms may make use of Node's __filename global. See GitHub issue #420.
   // So we define a dummy one.
+  /// @ts-ignore
   if (!global.__filename) {
+    /// @ts-ignore
     global.__filename = 'transform.js';
   }
   if (!transformer._promise) {
@@ -39,10 +41,14 @@ function transform(transformer, transformCode, code) {
 export default class TransformOutput extends React.Component {
   constructor(props) {
     super(props);
+    /** @type {null|any} */
+    const map = null
+    /** @type {null|any} */
+    const error = null
     this.state = {
       result: '',
-      map: null,
-      error: null,
+      map,
+      error,
     };
     this._posFromIndex = this._posFromIndex.bind(this);
   }

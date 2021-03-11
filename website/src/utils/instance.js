@@ -4,8 +4,8 @@ import RefactoringTypes from "../coevolutionService/utils/RefactoringTypes.json"
 
 /**
  * 
- * @param {object} query an object were values are string
- * @return for example nest({"a.b.c"=3}) --> {a:{b:{c:3}}} 
+ * @param {{[k:string]:string}} query an object were values are string
+ * @return {{[k:string]:string}} for example nest({"a.b.c"=3}) --> {a:{b:{c:3}}} 
  */
 function nest(query) {
   query = { ...query }
@@ -92,8 +92,27 @@ function normalyzeType(type) {
 
 /**
  * 
- * @param {*} content 
+ * @param {string} file 
+ * @param {string} range 
+ * @param {number} normalized_key 
+ */
+function makeRange(file, range, normalized_key) {
+  const [start, end] = (range || '-').split('-')
+    .map(x => x === '0' ? 0 : parseInt(x) || undefined)
+  const desc = RefactoringTypes[type][side][normalized_key].description
+  return {
+    file,
+    start, end,
+    descId: normalized_key, // optional
+    desc, // optional
+  }
+}
+
+/**
+ * 
+ * @param {{[k:string]:string|string[]}} content 
  * @param {'left'|'right'} side 
+ * @returns {{[k:string]:ReturnType<makeRange>[]}} 
  */
 function side2ranges(content, type, side) {
   const r = {}
@@ -103,24 +122,18 @@ function side2ranges(content, type, side) {
     if (content.hasOwnProperty(key) && key !== '0') {
       let default_file
       const qtt_check = {}
+      /** @type {(ReturnType<makeRange>)[]} */
       const ranges = [];
       const normalized_key = 'a'.charCodeAt() - key.charCodeAt();
-      let desc = key;
-      (Array.isArray(content[key]) ? content[key] : [content[key]]).forEach(
+      const desc = key;
+      const cc = content[key]
+      const aa = (Array.isArray(cc) ? cc : [cc])
+      aa.forEach(
         content => {
           if (qtt_check[key]) throw new Error('to much ranges for this kind of range')
           const [file, range] = content.split(':')
-          const [start, end] = (range || '-').split('-')
-            .map(x => x === '0' ? 0 : parseInt(x) || undefined)
           default_file = default_file || file
-          desc = RefactoringTypes[type][side][normalized_key].description
-          const e = {
-            file: file || default_file,
-            start, end,
-            descId: normalized_key, // optional
-            desc, // optional
-          }
-          ranges.push(e)
+          ranges.push(makeRange(file || default_file, range, normalized_key))
           qtt_check[key] = !RefactoringTypes[type][side][normalized_key].many
         })
       r[desc] = ranges
@@ -132,20 +145,24 @@ function side2ranges(content, type, side) {
 export function query2instance(query) {
 
   const { repo, before, after, type } = nest(query)
-  const r = {
-    repo,
-    commitIdAfter: typeof after === 'string'
-      ? after : after[0],
-    currentCase: null,
-    cases: [],
-  }
+
+  /** @type {undefined | string} */
+  let commitIdBefore = undefined
   
   if (before) {
     if (typeof before === 'string') {
-      r.commitIdBefore = before
+      commitIdBefore = before
     } else if(before[0]) {
-      r.commitIdBefore = before[0]
+      commitIdBefore = before[0]
     }
+  }
+  /** @type {string} */
+  const commitIdAfter = typeof after === 'string'
+  ? after : after && after[0]
+  const r = {
+    repo,
+    commitIdAfter,
+    commitIdBefore: commitIdBefore,
   }
 
   const o = {
@@ -153,7 +170,13 @@ export function query2instance(query) {
     before: side2ranges(before, normalyzeType(type), 'left'),
     after: side2ranges(after, normalyzeType(type), 'right'),
   }
-  r.cases.push(o)
-  r.currentCase = o
-  return r
+
+  return {
+    ...r,
+    currentCase: o,
+    cases: [o],
+  }
 }
+
+
+/** @typedef {ReturnType<query2instance>} Instance */

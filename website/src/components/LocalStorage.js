@@ -1,4 +1,8 @@
-const storage = global.localStorage;
+/** @type {Window} */
+// @ts-ignore
+const w = global
+
+const storage = w.localStorage;
 const key = 'explorerSettingsV1';
 const noop = () => {};
 

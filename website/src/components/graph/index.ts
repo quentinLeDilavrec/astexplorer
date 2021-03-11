@@ -4,4 +4,4 @@ import EvoImpactGraphReworked from './EvoImpactGraphReworked';
 export default [
   EvoImpactGraphReworked,
   EvoImpactGraph,
-];
+] as const;

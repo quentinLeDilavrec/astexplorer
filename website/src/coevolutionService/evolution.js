@@ -25,8 +25,12 @@ export default async function RemoteEvolutionService(differ, query, options = {}
         const res = {}
         if (differ.processEvolutions && json)
             res.value = differ.processEvolutions(json)
+        else if (json)
+            res.value = json
+        else
+            res.value = []
         res.uuid = uuidv1()
-        console.log("backend responce on evolution", res.value)
+        console.log("backend response on evolution", res.value)
         return res
     }
     switch (response.status) {

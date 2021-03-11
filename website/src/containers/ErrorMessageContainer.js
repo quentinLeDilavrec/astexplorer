@@ -1,6 +1,6 @@
 import {connect} from 'react-redux';
 import ErrorMessage from '../components/ErrorMessage';
-import {clearError} from '../store/actions';
+import actions from '../store/actions';
 import {getError} from '../store/selectors';
 
 function mapStateToProps(state) {
@@ -12,7 +12,7 @@ function mapStateToProps(state) {
 
 function mapDispatchToProps(dispatch) {
   return {
-    onWantToClose: () => dispatch(clearError()),
+    onWantToClose: () => dispatch(actions['Error/clear']()),
   };
 }
 

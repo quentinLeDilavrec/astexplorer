@@ -10,7 +10,9 @@ import EvolveButton from './buttons/EvolveButton';
 export default function Toolbar(props) {
   let {parser, transformer, differ, showTransformer, showDiffer} = props;
   let parserInfo = parser.displayName;
+  /** @type {string|JSX.Element} */
   let transformerInfo = '';
+  /** @type {string|JSX.Element} */
   let differInfo = '';
   if (parser) {
     if (parser.version) {

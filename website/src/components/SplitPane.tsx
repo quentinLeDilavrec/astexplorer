@@ -1,25 +1,35 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-let baseStyleHorizontal = {
+const baseStyleHorizontal = {
   position: 'absolute',
   top: 0,
   bottom: 0,
   boxSizing: 'border-box',
-};
+} as const;
 
-let baseStyleVertical = {
+const baseStyleVertical = {
   position: 'absolute',
   left: 0,
   right: 0,
   boxSizing: 'border-box',
-};
+} as const;
+
+type P = {
+  vertical: any,
+  className: string,
+  onResize: () => any,
+}
+
+type S = {
+  dividerPosition: number,
+}
 
 /**
  * Creates a left-right split pane inside its container.
  */
-export default class SplitPane extends React.Component {
-  constructor(props, context) {
+export default class SplitPane extends React.Component<P, S> {
+  constructor(props: P, context: any) {
     super(props, context);
     this._onMouseDown = this._onMouseDown.bind(this);
 
@@ -30,7 +40,9 @@ export default class SplitPane extends React.Component {
 
   _onMouseDown() {
     let {vertical} = this.props;
+    // @ts-ignore
     let max = vertical ? global.innerHeight : global.innerWidth;
+    // @ts-ignore
     global.document.body.style.cursor = vertical ? 'row-resize' : 'col-resize';
     let moveHandler = event => {
       event.preventDefault();
@@ -40,6 +52,7 @@ export default class SplitPane extends React.Component {
     let upHandler = () => {
       document.removeEventListener('mousemove', moveHandler);
       document.removeEventListener('mouseup', upHandler);
+      // @ts-ignore
       global.document.body.style.cursor = '';
 
       if (this.props.onResize) {
@@ -54,7 +67,9 @@ export default class SplitPane extends React.Component {
   render() {
     let {children} = this.props;
     let dividerPos = this.state.dividerPosition;
+    /** @type {React.CSSProperties} */
     let styleA;
+    /** @type {React.CSSProperties} */
     let styleB;
     let dividerStyle;
     if (!Array.isArray(children) || children.filter(x => x).length !== 2) {
@@ -116,7 +131,7 @@ export default class SplitPane extends React.Component {
     return (
       <div className={this.props.className}>
         <div style={styleA}>
-          {this.props.children[0]}
+          {this.props.children && this.props.children[0]}
         </div>
         <div
           className={
@@ -126,16 +141,17 @@ export default class SplitPane extends React.Component {
           style={dividerStyle}
         />
         <div style={styleB}>
-          {this.props.children[1]}
+          {this.props.children && this.props.children[1]}
         </div>
       </div>
     );
   }
-}
 
-SplitPane.propTypes = {
-  vertical: PropTypes.bool,
-  className: PropTypes.string,
-  children: PropTypes.node,
-  onResize: PropTypes.func,
-};
+  static propTypes = {
+    vertical: PropTypes.bool,
+    className: PropTypes.string,
+    children: PropTypes.node,
+    onResize: PropTypes.func,
+  }
+
+}

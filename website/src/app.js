@@ -25,7 +25,7 @@ import { astexplorer, persist, revive } from './store/reducers';
 import { createStore, applyMiddleware, compose } from 'redux';
 import { canSaveTransform, getRevision } from './store/selectors';
 import { enableBatching } from 'redux-batched-actions';
-import { loadSnippet } from './store/actions';
+import actions from './store/actions';
 import { render } from 'react-dom';
 import * as gist from './storage/gist';
 import * as evo from './storage/evo';
@@ -37,14 +37,13 @@ import differMiddleware from './store/differMiddleware';
 
 import 'diff-match-patch'
 import GraphChart from './containers/GraphOutputContainer';
-import { loadInstance } from './store/actions';
 import queryString from 'query-string';
 import CoEvolutionService from './coevolutionService';
 import { assertAbstractType } from 'graphql';
 import { query2instance } from './utils/instance';
 
 function resize() {
-  PubSub.publish('PANEL_RESIZE');
+  PubSub.publish('PANEL_RESIZE', undefined);
 }
 
 function App(props) {
@@ -118,7 +117,7 @@ App.propTypes = {
 };
 
 const AppContainer = connect(
-  state => {
+  (/** @type {import('./store/reducers').State} */state) => {
     return ({
       showTransformer: state.showTransformPanel,
       showDiffer: state.showDiffPanel,
@@ -127,7 +126,9 @@ const AppContainer = connect(
   },
 )(App);
 
-const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
+/** @type {any} */
+const w = window
+const composeEnhancers = w.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
 const sagaMiddleware = createSagaMiddleware();
 const store = createStore(
   enableBatching(astexplorer),
@@ -223,18 +224,18 @@ render(
 
 global.onhashchange = () => {
   if (location.hash.length > 1) {
-    store.dispatch(loadSnippet());
+    store.dispatch(actions['Snippet/Loading/start']());
   } else if (location.search.length > 1) {
     const parsed = queryString.parse(location.search);
-    store.dispatch(loadInstance(query2instance(parsed)));
+    store.dispatch(actions['Instance/load'](query2instance(parsed)));
   }
 };
 
 if (location.hash.length > 1) {
-  store.dispatch(loadSnippet());
+  store.dispatch(actions['Snippet/Loading/start']());
 } else if (location.search.length > 1) {
   const parsed = queryString.parse(location.search);
-  store.dispatch(loadInstance(query2instance(parsed)));
+  store.dispatch(actions['Instance/load'](query2instance(parsed)));
 }
 
 global.onbeforeunload = () => {

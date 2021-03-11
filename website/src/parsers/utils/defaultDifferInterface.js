@@ -12,4 +12,9 @@ export default {
   // loadDiffer
   // diff
 
+
+  processImpacts(impacts) {
+    return impacts || { perRoot: [], roots: [], tests: [] }
+  },
+  
 };

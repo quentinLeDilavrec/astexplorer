@@ -507,16 +507,29 @@ li.entry {
   user-select: text;
 }
 
-.entry.toggable::before {
-  content: '+';
-  color: green;
-  position: absolute;
+.entry.toggable > :first-child::before {
+  content: '⯈';
+  /* color: green; */
   left: -10px;
+  position: relative;
+  opacity: .5;
 }
 
-.entry.toggable.open::before {
-  content: '-';
-  color: red;
+.entry.toggable.open > :first-child::before {
+  content: '⯆';
+  /* color: red; */
+}
+
+input.fas[type=checkbox] { 
+  font-family: FontAwesome;
+  display: inline-block;
+  font-weight: 400;
+	font-style: normal;
+	font-size: 1.0em;
+	text-align:center;
+	letter-spacing: 6px;
+  transform: scale(.9);
+  vertical-align: middle;
 }
 
 .entry .invokeable {

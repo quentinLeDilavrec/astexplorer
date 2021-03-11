@@ -1,5 +1,5 @@
 import { connect } from 'react-redux';
-import { closeSettingsDialog, setParserSettings, setDifferSettings } from '../store/actions';
+import actions from '../store/actions';
 import { showSettingsDialog, getParser, getParserSettings, getDiffer, getDifferSettings } from '../store/selectors';
 import SettingsDialog from '../components/dialogs/SettingsDialog';
 
@@ -19,9 +19,9 @@ function mapDispatchToProps(dispatch) {
   return {
     onSave: (category, newSettings) =>
       dispatch(category === 'evolve'
-        ? setDifferSettings(newSettings)
-        : setParserSettings(newSettings)),
-    onWantToClose: () => dispatch(closeSettingsDialog()),
+        ? actions['Evolutions/Settings/set'](newSettings)
+        : actions['Parse/Settings/set'](newSettings)),
+    onWantToClose: () => dispatch(actions.closeSettingsDialog()),
   };
 }
 

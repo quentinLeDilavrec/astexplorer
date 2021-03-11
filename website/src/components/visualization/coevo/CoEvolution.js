@@ -5,6 +5,7 @@ import PubSub from 'pubsub-js';
 import React from 'react';
 import { useSelectedNode } from '../SelectedNodeContext.js';
 import focusNodes from '../focusNodes.js'
+import ElementContainer from '../tree/Element';
 
 import cx from 'classnames';
 import stringify from '../../../utils/stringify';
@@ -118,7 +119,7 @@ function useOpenState(openFromParent, isInRange) {
   return [computedOpenState, setOwnOpenState];
 }
 
-const Element = React.memo(function Element({
+const CoEvolutions = React.memo(function CoEvolutions({
   name,
   value,
   computed,
@@ -132,6 +133,315 @@ const Element = React.memo(function Element({
   onClick,
   position,
   diff,
+  selectableEvo = false,
+  onToggleEvo = undefined,
+  selectedEvos
+}) {
+  const opensByDefault = useMemo(
+    () => treeAdapter.opensByDefault(value, name),
+    [treeAdapter, value, name],
+  ) || level === 0;
+  const [openState, setOpenState] = useOpenState(
+    open,
+    autofocus && (isInRange || hasChildrenInRange),
+  );
+  const element = useRef();
+  if (autofocus && isInRange && !hasChildrenInRange) {
+    focusNodes('add', element);
+  }
+
+  const isOpen = openState === OPEN_STATES.DEFAULT ?
+    opensByDefault :
+    openState !== OPEN_STATES.CLOSED;
+
+  const onToggleClick = useCallback(
+    event => {
+      const shiftKey = event.shiftKey;
+      const newOpenState = shiftKey ? OPEN_STATES.DEEP_OPEN : (isOpen ? OPEN_STATES.CLOSED : OPEN_STATES.OPEN);
+      if (onClick) {
+        onClick(newOpenState, true);
+      }
+      setOpenState(newOpenState);
+    },
+    [onClick, isOpen],
+  );
+
+  const range = treeAdapter.getRange(value);
+  let onMouseOver;
+  let onMouseLeave;
+
+  // enable highlight on hover if node has a range
+  if (range && level !== 0) {
+    if (diff) {
+      onMouseOver = event => {
+        event.stopPropagation();
+        PubSub.publish('HIGHLIGHT_DIFF', { node: value, range });
+      };
+
+      onMouseLeave = event => {
+        event.stopPropagation();
+        PubSub.publish('CLEAR_HIGHLIGHT_DIFF', { node: value, range });
+      };
+    } else {
+      onMouseOver = event => {
+        event.stopPropagation();
+        PubSub.publish('HIGHLIGHT', { node: value, range });
+      };
+
+      onMouseLeave = event => {
+        event.stopPropagation();
+        PubSub.publish('CLEAR_HIGHLIGHT', { node: value, range });
+      };
+    }
+  }
+
+  const clickHandler = useCallback(
+    () => {
+      setOpenState(OPEN_STATES.OPEN);
+      if (onClick) {
+        onClick(OPEN_STATES.OPEN);
+      }
+    },
+    [onClick],
+  );
+
+  function renderCoEvolution(key, value, parent, name, computed) {
+    return (
+      <CoEvolutionContainer
+        key={key}
+        name={name}
+        open={openState === OPEN_STATES.DEEP_OPEN}
+        value={value}
+        computed={computed}
+        level={level + 1}
+        treeAdapter={treeAdapter}
+        autofocus={autofocus}
+        parent={parent}
+        onClick={clickHandler}
+        position={position}
+        selectedEvos = {selectedEvos}
+        onToggleEvo = {onToggleEvo}
+        selectableEvo = {selectableEvo}
+      />
+    );
+  }
+
+  let valueOutput = null;
+  let content = null;
+  let prefix = null;
+  let suffix = null;
+  let showToggler = false;
+
+  if (value && typeof value === 'object') {
+    if (typeof value.length === 'number') {
+      const node = value;
+      let elements = Array.from(treeAdapter.walkNode(value))
+        .filter(({ key }) => key !== 'length')
+        .map(({ key, value, computed }) => renderCoEvolution(
+          key,
+          value,
+          node,
+          Number.isInteger(+key) ? undefined : key,
+          computed,
+        ));
+      return <ul className="value-body">{elements}</ul>;
+    } else {
+      throw null;
+    }
+  }
+},
+  (prevProps, nextProps) => {
+    return prevProps.name === nextProps.name &&
+      prevProps.value === nextProps.value &&
+      prevProps.computed === nextProps.computed &&
+      prevProps.open === nextProps.open &&
+      prevProps.level === nextProps.level &&
+      prevProps.treeAdapter === nextProps.treeAdapter &&
+      prevProps.autofocus === nextProps.autofocus &&
+      prevProps.selected === nextProps.selected &&
+      prevProps.onClick === nextProps.onClick &&
+      prevProps.isInRange === nextProps.isInRange &&
+      prevProps.hasChildrenInRange === nextProps.hasChildrenInRange &&
+      //
+      ((nextProps.isInRange || nextProps.hashChildrenInRange) && prevProps.position === nextProps.position);
+  });
+
+CoEvolutions.propTypes = {
+  name: PropTypes.string,
+  value: PropTypes.any,
+  computed: PropTypes.bool,
+  open: PropTypes.bool,
+  level: PropTypes.number,
+  treeAdapter: PropTypes.object.isRequired,
+  autofocus: PropTypes.bool,
+  parent: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array,
+  ]),
+  diff: PropTypes.bool,
+  select: PropTypes.bool,
+};
+
+const NOT_COMPUTED = {};
+
+const FunctionElement = React.memo(function FunctionElement(props) {
+  const [computedValue, setComputedValue] = useState(NOT_COMPUTED);
+  const [error, setError] = useState(null);
+  const { name, value, parent, computed, treeAdapter } = props;
+
+  if (computedValue !== NOT_COMPUTED) {
+    if (treeAdapter.isArray(computedValue) || treeAdapter.isObject(computedValue)) {
+      return (
+        <CoEvolutionsContainer
+          {...props}
+          value={computedValue}
+          level={props.level + 1}
+        />
+      );
+    }
+    return (
+      <PrimitiveElement
+        name={name}
+        value={computedValue}
+        computed={computed}
+      />
+    );
+  }
+
+  return (
+    <li className="entry">
+      {name ? <PropertyName name={name} computed={computed} /> : null}
+      <span className="value">
+        <span
+          className="ge invokeable"
+          title="Click to invoke function"
+          onClick={() => {
+            try {
+              const computedValue = value.call(parent);
+              console.log(computedValue); // eslint-disable-line no-console
+              setComputedValue(computedValue);
+            } catch (err) {
+              console.error(`Unable to run "${name}": `, err.message); // eslint-disable-line no-console
+              setError(err);
+            }
+          }}>
+          (...)
+        </span>
+      </span>
+      {error ?
+        <span>
+          {' '}
+          <i
+            title={error.message}
+            className="fa fa-exclamation-triangle"
+          />
+        </span> :
+        null
+      }
+    </li>
+  );
+});
+
+FunctionElement.propTypes = Element.propTypes;
+
+const PrimitiveElement = React.memo(function PrimitiveElement({
+  name,
+  value,
+  computed,
+}) {
+  return (
+    <li className="entry">
+      {name ? <PropertyName name={name} computed={computed} /> : null}
+      <span className="value">
+        <span className="s">{stringify(value)}</span>
+      </span>
+    </li>
+  );
+});
+
+PrimitiveElement.propTypes = {
+  name: PropTypes.string,
+  value: PropTypes.any,
+  computed: PropTypes.bool,
+};
+
+const PropertyName = React.memo(function PropertyName({ name, computed, onClick }) {
+  return (
+    <span className="key">
+      <span className="name nb" onClick={onClick}>
+        {computed ? <span title="computed">*{name}</span> : name}
+      </span>
+      <span className="p">:&nbsp;</span>
+    </span>
+  );
+});
+
+PropertyName.propTypes = {
+  name: PropTypes.string,
+  computed: PropTypes.bool,
+  onClick: PropTypes.func,
+};
+
+export default function CoEvolutionsContainer(props) {
+  const [selected, setSelected] = useState(false);
+  const setSelectedNode = useSelectedNode();
+  const isInRange = props.treeAdapter.isInRange(props.value, props.position);
+  const onClick = useCallback(
+    (state, own) => {
+      if (own) {
+        if (state === OPEN_STATES.CLOSED) {
+          setSelectedNode(null);
+          setSelected(false);
+        } else {
+          setSelectedNode(props.value, () => setSelected(false));
+          setSelected(true);
+        }
+      }
+      if (props.onClick) {
+        props.onClick(state);
+      }
+    },
+    [props.value, props.onClick],
+  );
+
+  return (
+    <CoEvolutions
+      {...props}
+      selected={selected}
+      hasChildrenInRange={
+        props.treeAdapter.hasChildrenInRange(props.value, props.position)
+      }
+      isInRange={isInRange}
+      onClick={onClick}
+      
+    />
+  );
+}
+
+CoEvolutionsContainer.propTypes = Element.propTypes;
+
+
+
+
+
+
+const CoEvolution = React.memo(function CoEvolution({
+  name,
+  value,
+  computed,
+  open,
+  level,
+  treeAdapter,
+  autofocus,
+  isInRange,
+  hasChildrenInRange,
+  selected,
+  onClick,
+  position,
+  diff,
+  selectableEvo = false,
+  onToggleEvo,
+  selectedEvos
 }) {
   const opensByDefault = useMemo(
     () => treeAdapter.opensByDefault(value, name),
@@ -202,30 +512,19 @@ const Element = React.memo(function Element({
   );
 
   function renderChild(key, value, parent, name, computed) {
-    if (treeAdapter.isArray(value) || treeAdapter.isObject(value) || typeof value === 'function') {
-      const ElementType = typeof value === 'function' ? FunctionElement : ElementContainer;
-      return (
-        <ElementType
-          key={key}
-          name={name}
-          open={openState === OPEN_STATES.DEEP_OPEN}
-          value={value}
-          computed={computed}
-          level={level + 1}
-          treeAdapter={treeAdapter}
-          autofocus={autofocus}
-          parent={parent}
-          onClick={clickHandler}
-          position={position}
-        />
-      );
-    }
     return (
-      <PrimitiveElement
+      <ElementContainer
         key={key}
         name={name}
+        open={openState === OPEN_STATES.DEEP_OPEN}
         value={value}
         computed={computed}
+        level={level + 1}
+        treeAdapter={treeAdapter}
+        autofocus={autofocus}
+        parent={parent}
+        onClick={clickHandler}
+        position={position}
       />
     );
   }
@@ -241,19 +540,30 @@ const Element = React.memo(function Element({
     if (!treeAdapter.isArray(value)) {
       const nodeName = treeAdapter.getNodeName(value);
       if (nodeName) {
-          valueOutput =
-          <span>
-            <span className="tokenName nc" onClick={onToggleClick}>
-              {nodeName}{' '}
-              {selected ?
-                <span className="ge" style={{ fontSize: '0.8em' }}>
-                  {' = $node'}
-                </span> :
-                null
-              }
-            </span>
+        valueOutput =
+          <span className="tokenName nc" onClick={onToggleClick}>
+            {nodeName}{' '}
+            {selected ?
+              <span className="ge" style={{ fontSize: '0.8em' }}>
+                {' = $node'}
+              </span> :
+              null
+            }
           </span>
-
+          if (selectableEvo){
+            valueOutput = 
+            <span>
+              {valueOutput}
+              <input
+                type="checkbox"
+                defaultChecked={selectedEvos[value.id]}
+                // const [ownOpenState, setOwnOpenState] = useState(OPEN_STATES.DEFAULT);
+                onChange={function(){(onToggleEvo(value.id),console.log("testy", treeAdapter._adapterOptions.testy("testy"),selectedEvos))}}
+                className="fas"
+              />
+            </span>
+          }
+          
       }
     }
 
@@ -351,7 +661,7 @@ const Element = React.memo(function Element({
       ((nextProps.isInRange || nextProps.hashChildrenInRange) && prevProps.position === nextProps.position);
   });
 
-Element.propTypes = {
+Evolution.propTypes = {
   name: PropTypes.string,
   value: PropTypes.any,
   computed: PropTypes.bool,
@@ -365,109 +675,11 @@ Element.propTypes = {
   ]),
   diff: PropTypes.bool,
   select: PropTypes.bool,
+  onToggleEvo: PropTypes.func,
 };
 
-const NOT_COMPUTED = {};
 
-const FunctionElement = React.memo(function FunctionElement(props) {
-  const [computedValue, setComputedValue] = useState(NOT_COMPUTED);
-  const [error, setError] = useState(null);
-  const { name, value, parent, computed, treeAdapter } = props;
-
-  if (computedValue !== NOT_COMPUTED) {
-    if (treeAdapter.isArray(computedValue) || treeAdapter.isObject(computedValue)) {
-      return (
-        <ElementContainer
-          {...props}
-          value={computedValue}
-          level={props.level + 1}
-        />
-      );
-    }
-    return (
-      <PrimitiveElement
-        name={name}
-        value={computedValue}
-        computed={computed}
-      />
-    );
-  }
-
-  return (
-    <li className="entry">
-      {name ? <PropertyName name={name} computed={computed} /> : null}
-      <span className="value">
-        <span
-          className="ge invokeable"
-          title="Click to invoke function"
-          onClick={() => {
-            try {
-              const computedValue = value.call(parent);
-              console.log(computedValue); // eslint-disable-line no-console
-              setComputedValue(computedValue);
-            } catch (err) {
-              console.error(`Unable to run "${name}": `, err.message); // eslint-disable-line no-console
-              setError(err);
-            }
-          }}>
-          (...)
-        </span>
-      </span>
-      {error ?
-        <span>
-          {' '}
-          <i
-            title={error.message}
-            className="fa fa-exclamation-triangle"
-          />
-        </span> :
-        null
-      }
-    </li>
-  );
-});
-
-FunctionElement.propTypes = Element.propTypes;
-
-const PrimitiveElement = React.memo(function PrimitiveElement({
-  name,
-  value,
-  computed,
-}) {
-  return (
-    <li className="entry">
-      {name ? <PropertyName name={name} computed={computed} /> : null}
-      <span className="value">
-        <span className="s">{stringify(value)}</span>
-      </span>
-    </li>
-  );
-});
-
-PrimitiveElement.propTypes = {
-  name: PropTypes.string,
-  value: PropTypes.any,
-  computed: PropTypes.bool,
-};
-
-const PropertyName = React.memo(function PropertyName({ name, computed, onClick }) {
-  return (
-    <span className="key">
-      <span className="name nb" onClick={onClick}>
-        {computed ? <span title="computed">*{name}</span> : name}
-      </span>
-      <span className="p">:&nbsp;</span>
-    </span>
-  );
-});
-
-PropertyName.propTypes = {
-  name: PropTypes.string,
-  computed: PropTypes.bool,
-  onClick: PropTypes.func,
-};
-
-export default function ElementContainer(props) {
+function CoEvolutionContainer(props) {
   const [selected, setSelected] = useState(false);
   const setSelectedNode = useSelectedNode();
   const isInRange = props.treeAdapter.isInRange(props.value, props.position);
@@ -490,7 +702,7 @@ export default function ElementContainer(props) {
   );
 
   return (
-    <Element
+    <CoEvolution
       {...props}
       selected={selected}
       hasChildrenInRange={
@@ -498,9 +710,8 @@ export default function ElementContainer(props) {
       }
       isInRange={isInRange}
       onClick={onClick}
-      
     />
   );
 }
 
-ElementContainer.propTypes = Element.propTypes;
+CoEvolutionContainer.propTypes = Element.propTypes;

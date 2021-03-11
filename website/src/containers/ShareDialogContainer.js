@@ -1,5 +1,5 @@
 import {connect} from 'react-redux';
-import {closeShareDialog} from '../store/actions';
+import actions from '../store/actions';
 import {showShareDialog, getRevision} from '../store/selectors';
 import ShareDialog from '../components/dialogs/ShareDialog';
 
@@ -12,7 +12,7 @@ function mapStateToProps(state) {
 
 function mapDispatchToProps(dispatch) {
   return {
-    onWantToClose: () => dispatch(closeShareDialog()),
+    onWantToClose: () => dispatch(actions.closeShareDialog()),
   };
 }
 

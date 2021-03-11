@@ -29,10 +29,6 @@ export default {
     return res
   },
 
-  processImpacts(impacts) {
-    return impacts || { perRoot: [], roots: [], tests: [] }
-  },
-
   async diff(differ, old, neww) {
     return await differ(old, neww)
   },
@@ -62,7 +58,6 @@ export default {
         keywords[key] = false
       }
     }
-    debugger
     return {
       evolutions,
       keywords,

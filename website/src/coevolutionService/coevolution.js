@@ -9,9 +9,9 @@ import { v1 as uuidv1 } from 'uuid';
  * @param {any} query can be nested when using PUT request
  * @param {RequestInit} options 
  */
-export default async function RemoteImpactService(differ, query, options = {}) {
+export default async function RemoteEvolutionService(differ, query, options = {}) {
     const response = await api(
-        `/impact/${'default'}`, {
+        `/coevolution/${'default'}`, {
         method: 'PUT',
         body: JSON.stringify(query),
         ...options,
@@ -23,12 +23,7 @@ export default async function RemoteImpactService(differ, query, options = {}) {
     if (response.ok) {
         const json = await response.json();
         const res = {}
-        if (differ.processImpacts)
-            res.value = differ.processImpacts(json)
-        else if (json)
-            res.value = json
-        else
-            res.value = { perRoot: [], roots: [], tests: [] }
+        res.value = json
         res.uuid = uuidv1()
         return res
     }

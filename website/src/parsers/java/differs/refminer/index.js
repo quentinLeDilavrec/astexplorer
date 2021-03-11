@@ -30,10 +30,6 @@ export default {
     return res
   },
 
-  processImpacts(impacts) {
-    return impacts || { perRoot: [], roots: [], tests: [] }
-  },
-
   async diff(differ, old, neww) {
     return await differ(old, neww)
   },
@@ -50,9 +46,9 @@ export default {
       if (RefactoringTypes2.hasOwnProperty(key)) {
         const element = RefactoringTypes2[key]
         evolutions[key] =
-          element.before.some(x => x.keys.method || x.keys.class) &&
-          !element.before.some(x => x.many) &&
-          !element.after.some(x => x.many)
+          element.left.some(x => x.keys.method || x.keys.class) &&
+          !element.left.some(x => x.many) &&
+          !element.right.some(x => x.many)
       }
     }
     const keywords = {}
@@ -63,7 +59,6 @@ export default {
         keywords[key] = false
       }
     }
-    debugger
     return {
       evolutions,
       keywords,

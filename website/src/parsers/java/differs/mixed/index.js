@@ -2,6 +2,7 @@ import defaultDifferInterface from '../../../utils/defaultDifferInterface';
 import RefactoringTypes from "../../../../coevolutionService/utils/RefactoringTypes.json";
 import React from 'react';
 import SettingsRenderer from '../../../utils/SettingsRenderer';
+import ElementContainer from '../../../../components/visualization/tree/Element';
 
 const ID = 'Mixed';
 const VERSION = '0.0.0';
@@ -13,25 +14,27 @@ export default {
   displayName: ID,
   version: VERSION,
   homepage: HOMEPAGE,
-  locationProps: new Set(['loc', 'start', 'end', 'side', 'repository', 'astPath', 'commitId']),
-  typeProps: new Set(['type', 'codeElementType'/*, 'node type'*/]),
-  _ignoredProperties: new Set(['side', 'value']),
+  locationProps: new Set(['loc', 'start', 'end', 'side', 'repository', 'astPath', 'commitId', 'file']),
+  typeProps: new Set(['type', 'codeElementType',/* 'description', 'node type'*/]),
+  _ignoredProperties: new Set(['side', 'value', "id"]),
 
   // opensByDefault(_node, _key) {
   //   return _key === "actions";
   // },
 
   processEvolutions(evolutions) {
-    const res = evolutions;
-    res.forEach(addSide)
-    res.forEach(
-      ({before,after, content, type},i) => 
-      res[i] = {type, before, after, ...content})
-    return res
-  },
-
-  processImpacts(impacts) {
-    return impacts || { perRoot: [], roots: [], tests: [] }
+    // const res = evolutions;
+    // res.forEach(addSide)
+    // res.forEach(
+    //   ({before, after, content, type}, i) => 
+    //   res[i] = {type, before, after, ...content})
+    return evolutions.map((x,i) => {
+      let {before, after, content, type} = x
+      before = before.map(x => ({...x, side: "left"}))
+      after = after.map(x => ({...x, side: "right"}))
+      x = {id:i, type, before, after, ...content}
+      return x
+    })
   },
 
   async diff(differ, old, neww) {
@@ -63,7 +66,6 @@ export default {
         keywords[key] = false
       }
     }
-    debugger
     return {
       evolutions,
       keywords,
@@ -185,11 +187,6 @@ function mapObject(obj, fct) {
   return r
 }
 
-function addSide(op) { // TODO remove it
-  op.before.map(x => x.side = "left")
-  op.after.map(x => x.side = "right")
-}
-
 console.log('RefactoringTypes', RefactoringTypes)
 const RefactoringTypes2 = {}
 
@@ -212,6 +209,7 @@ for (const key in RefactoringTypes) {
     RefactoringTypes2[key] = o
   }
 }
+
 console.log('RefactoringTypes2', RefactoringTypes2, JSON.stringify(RefactoringTypes2))
 
 const FilteredRefactorings = {}

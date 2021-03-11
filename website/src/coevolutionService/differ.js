@@ -28,9 +28,9 @@ export default async function RemoteDifferService(differ, query, options = {}) {
         if (differ.processImpacts)
         json.impact = differ.processImpacts(json.impact)
         json.uuid = uuidv1()
-        console.log("differ responce", json)
-        console.log("differ responce .impact", json.impact)
-        console.log("differ responce .diff", json.diff)
+        console.log("differ response", json)
+        console.log("differ response .impact", json.impact)
+        console.log("differ response .diff", json.diff)
         return json
     }
     switch (response.status) {

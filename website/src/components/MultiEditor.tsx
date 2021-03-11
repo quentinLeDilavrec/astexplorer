@@ -11,30 +11,15 @@ import SplitPane from './SplitPane';
 import Editor2 from './Editor2';
 import DiffEditor from './DiffEditor';
 import RemoteFileService from '../coevolutionService/file';
-
-const defaultPrettierOptions = {
-  printWidth: 80,
-  tabWidth: 2,
-  singleQuote: false,
-  trailingComma: 'none',
-  bracketSpacing: true,
-  jsxBracketSameLine: false,
-  parser: 'babylon',
-};
+import { PT } from '../containers/MultiCodeContainer';
 
 const ORIENTATION = {
   horizontal: "horizontal",
   vertical: "vertical",
 }
 
-/**
- * 
- * @param {any[]} positions should share the same file value
- * @param {string} repo 
- * @param {string} commitId 
- * @param {string|string[]} marking 
- */
-function node2file(nodes, repo, commitId, marking) {
+
+function node2file(nodes: any[] | any, repo: string, commitId: string, marking: string | string[]) {
   if (typeof nodes.file === "string") {
     nodes = [nodes]
   }
@@ -44,6 +29,7 @@ function node2file(nodes, repo, commitId, marking) {
   return {
     repo: repo, commitId: commitId, path: nodes[0].file || nodes[0].filePath,
     ranges: nodes.map(x => ({ start: x.start, end: x.end, marking: marking })),
+    focus: undefined as undefined | boolean,
   }
 }
 
@@ -64,7 +50,7 @@ function heuristic(node) {
   return node
 }
 
-function node2diff(nodesBefore, nodesAfter, repo, commitIdBefore, commitIdAfter, focus, marking) {
+function node2diff(nodesBefore: any, nodesAfter: any[] | undefined, repo: string, commitIdBefore: string, commitIdAfter: string, focus: string, marking: string | string[]) {
   const r = {
     before: node2file(nodesBefore, repo, commitIdBefore, marking),
     after: node2file(nodesAfter?(typeof nodesAfter.map==="function"?nodesAfter:[nodesAfter]).map(heuristic):nodesBefore, repo, commitIdAfter, marking)
@@ -85,7 +71,7 @@ function isTest(d) {
 
 function findimpactedTests(node, max_depth = 5) {
   // TODO do not rely on d3 to move in the graph
-  const r = []
+  const r: any[] = []
   const stack = [node]
   const dstack = [0]
   while (stack.length > 0) {
@@ -93,7 +79,7 @@ function findimpactedTests(node, max_depth = 5) {
     const depth = dstack.shift()
     if (isTest(curr)) {
       r.push(curr)
-    } else if (depth <= max_depth) {
+    } else if (depth!==undefined && depth <= max_depth) {
       stack.push(...(curr.effects2.map(x => x.target)));
       dstack.push(...(curr.effects2.map(x => depth + 1)));
     }
@@ -101,10 +87,10 @@ function findimpactedTests(node, max_depth = 5) {
   return r
 }
 
-function findRoot(node) {
+function findRoot(node: any) {
   // TODO put it in some utils file
   // TODO do not rely on d3 to move in the graph
-  const r = []
+  const r: any[] = []
   const stack = [node]
   while (stack.length > 0) {
     const curr = stack.pop()
@@ -120,7 +106,7 @@ function findRoot(node) {
 const UNSPEC_TYPE = 'move';
 const UNSPEC_WHAT = 'something';
 
-function graphNodesToSecenario(graphNodes, repo, commitIdBefore, commitIdAfter) {
+function graphNodesToSecenario(graphNodes: { node: any; root?: any; }, repo: any, commitIdBefore: string, commitIdAfter: string) {
   const { node } = graphNodes
   const impactedTests = findimpactedTests(node)
   const root = findRoot(node)[0] // TODO generalize all get(0), a move is a 1 to 1 ref but an extract is apriori a n to n.
@@ -146,7 +132,7 @@ function graphNodesToSecenario(graphNodes, repo, commitIdBefore, commitIdAfter) 
   }
 }
 
-function scenario2Layout(scenario) {
+function scenario2Layout(scenario: ReturnType<typeof graphNodesToSecenario>) {
   if (scenario.type === 'move' && scenario.what === 'method') {
     return {
       orientation: ORIENTATION.vertical,
@@ -221,11 +207,23 @@ async function getContent(repo, commitId, path, mode, docs) {
 }
 
 function resize() {
-  PubSub.publish('PANEL_RESIZE');
+  PubSub.publish('PANEL_RESIZE', undefined);
 }
 
+type InternalState = {
+  value: PT['value'],
+  mode: PT['mode'],
+}
 
-export default class MultiEditor extends React.Component {
+export default class MultiEditor extends React.Component<PT, InternalState> {
+  codeMirror: undefined;
+  _updateTimer: any;
+  _CMHandlers: any[];
+  _subscriptions: any[];
+  _layout: {};
+  _markerRange: any;
+  _mark: any;
+  _mark_orig: any;
 
   constructor(props) {
     super(props);
@@ -233,10 +231,16 @@ export default class MultiEditor extends React.Component {
       value: props.value,
       mode: props.mode,
     };
+    this.codeMirror = undefined
+    this._updateTimer = undefined
+    this._CMHandlers = [];
+    this._subscriptions = [];
+    this._layout = {}
+    
     this._layoutRenderer = this._layoutRenderer.bind(this);
     // this.handleScenarioChange = this.handleScenarioChange.bind(this);
   }
-
+  
   _layoutRenderer(x, docs = {}, key = "") {
     console.log(3, this)
     if (x.orientation === ORIENTATION.vertical) {
@@ -289,6 +293,7 @@ export default class MultiEditor extends React.Component {
               before: { ...x.before, doc: await getContent(x.before.repo, x.before.commitId, x.before.path, this.props.mode, docs) },
               after: { ...x.after, doc: await getContent(x.after.repo, x.after.commitId, x.after.path, this.props.mode, docs) }
             })
+            y.
           }
           return y
         }}
@@ -344,172 +349,142 @@ export default class MultiEditor extends React.Component {
     return !!nextState.forced && this.state !== nextState;
   }
 
-  getValue() {
-    return this.codeMirror && (this.state.value = this.codeMirror.getValue());
+  // componentDidMount() {
+
+  //   this._CMHandlers = [];
+  //   this._subscriptions = [];
+  //   this._layout = {}
+
+  //   // const tmp = 
+  //   // ReactDOM.render(tmp, this.container)
+
+  //   this._bindCMHandler('blur', instance => {
+  //     if (!this.props.enableFormatting) return;
+
+  //     // @ts-ignore
+  //     require(['prettier/standalone', 'prettier/parser-babylon'], (prettier, babylon) => {
+  //       const currValue = instance.doc.getValue();
+  //       const options = Object.assign({},
+  //         defaultPrettierOptions,
+  //         {
+  //           printWidth: instance.display.maxLineLength,
+  //           plugins: [babylon],
+  //         });
+  //       instance.doc.setValue(prettier.format(currValue, options));
+  //     });
+  //   });
+
+  //   this._bindCMHandler('changes', () => {
+  //     clearTimeout(this._updateTimer);
+  //     this._updateTimer = setTimeout(this._onContentChangeRight.bind(this), 200);
+  //   }, "right");
+  //   this._bindCMHandler('changes', () => {
+  //     clearTimeout(this._updateTimer);
+  //     this._updateTimer = setTimeout(this._onContentChangeLeft.bind(this), 200);
+  //   }, "left");
+  //   this._bindCMHandler('cursorActivity', () => {
+  //     clearTimeout(this._updateTimer);
+  //     this._updateTimer = setTimeout(this._onActivityRight.bind(this, true), 100);
+  //   }, "right");
+  //   this._bindCMHandler('cursorActivity', () => {
+  //     clearTimeout(this._updateTimer);
+  //     this._updateTimer = setTimeout(this._onActivityLeft.bind(this, true), 100);
+  //   }, "left");
+  //   this._subscriptions.push(
+  //     PubSub.subscribe('PANEL_RESIZE', () => {
+  //       // TODO dispatch to childs
+  //     }),
+  //     PubSub.subscribe('CHANGE_DIFF_CONTEXT', this.changeDiffContext),
+  //   );
+
+  //   // if (this.props.highlight) {
+  //   //   this._markerRange = null;
+  //   //   this._mark = null;
+  //   //   this._subscriptions.push(
+  //   //     PubSub.subscribe('HIGHLIGHT', (_, { node, range }) => {
+  //   //       if (!range) {
+  //   //         return;
+  //   //       }
+  //   //       // TODO dispatch to childs
+
+  //   //       // console.log(1243, this.codeMirror, this.codeMirror.edit.state.diffViews[0].orig)
+  //   //       // let docRight = this.codeMirror.edit.getDoc();
+  //   //       // let docLeft = this.codeMirror.edit.state.diffViews[0].orig.getDoc();
+  //   //       // this._markerRange = range;
+  //   //       // // We only want one mark at a time.
+  //   //       // if (this._mark) {
+  //   //       //   this._mark.clear();
+  //   //       // }
+  //   //       // if (this._mark_orig) {
+  //   //       //   this._mark_orig.clear();
+  //   //       // }
+  //   //       // let [startRight, endRight] = range.map(index => this._posFromIndex(docRight, index));
+  //   //       // let [startLeft, endLeft] = range.map(index => this._posFromIndex(docLeft, index));
+  //   //       // if (!startRight || !endRight) {
+  //   //       //   this._markerRange = this._mark = null;
+  //   //       //   return;
+  //   //       // }
+  //   //       // if (node.side === "right") {
+  //   //       //   this._mark = this.codeMirror.edit.markText(
+  //   //       //     startRight,
+  //   //       //     endRight,
+  //   //       //     { className: 'marked' },
+  //   //       //   );
+  //   //       // }
+  //   //       // if (node.side === "left") {
+  //   //       //   this._mark_orig = this.codeMirror.edit.state.diffViews[0].orig.markText(
+  //   //       //     startLeft,
+  //   //       //     endLeft,
+  //   //       //     { className: 'marked' },
+  //   //       //   );
+  //   //       // }
+  //   //     }),
+
+  //   //     PubSub.subscribe('CLEAR_HIGHLIGHT', (_, { range=undefined } = {}) => {
+  //   //       const cMR = this._markerRange
+  //   //       const cR = range
+  //   //       if (!cR ||
+  //   //         cMR &&
+  //   //         cR[0] === cMR[0] &&
+  //   //         cR[1] === cMR[1]
+  //   //       ) {
+  //   //         this._markerRange = null;
+  //   //         const m = this._mark
+  //   //         if (m !== null) {
+  //   //           m.clear();
+  //   //           this._mark = null;
+  //   //         }
+  //   //         if (this._mark_orig !== null) {
+  //   //           this._mark_orig.clear();
+  //   //           this._mark_orig = null;
+  //   //         }
+  //   //       }
+  //   //     }),
+  //   //   );
+  //   // }
+
+  // }
+
+  /**
+   * @param {{ node: any; root: any; }} graphNodes
+   */
+  changeDiffContext(_, graphNodes: { node: any; root: any; }) {
+    const { node, root } = graphNodes
+    console.log(684, node, root)
+    const x = graphNodesToSecenario(graphNodes,
+      this.state.value.instance.repo,
+      this.state.value.instance.commitIdBefore || '',
+      this.state.value.instance.commitIdAfter || '')
+
+    this.setState({
+      ...this.state,
+      value: {
+        ...this.state.value,
+        ...x,
+      },
+      forced: true
+    })
   }
-
-  getOldValue() {
-    return this.codeMirror && (this.state.oldvalue = this.codeMirror.edit.state.diffViews[0].orig.getValue());
-  }
-
-  _getErrorLine(error) {
-    return error.loc ? error.loc.line : (error.lineNumber || error.line);
-  }
-
-  _setError(error) {
-    if (this.codeMirror) {
-      let oldError = this.props.error;
-      if (oldError) {
-        let lineNumber = this._getErrorLine(oldError);
-        if (lineNumber) {
-          this.codeMirror.removeLineClass(lineNumber - 1, 'text', 'errorMarker');
-        }
-      }
-
-      if (error) {
-        let lineNumber = this._getErrorLine(error);
-        if (lineNumber) {
-          this.codeMirror.edit.addLineClass(lineNumber - 1, 'text', 'errorMarker');
-        }
-      }
-    }
-  }
-
-  _posFromIndex(doc, index) {
-    return (this.props.posFromIndex ? this.props : doc).posFromIndex(index);
-  }
-
-  componentDidMount() {
-
-    this._CMHandlers = [];
-    this._subscriptions = [];
-    this._layout = {}
-
-    // const tmp = 
-    // ReactDOM.render(tmp, this.container)
-
-    this._bindCMHandler('blur', instance => {
-      if (!this.props.enableFormatting) return;
-
-      require(['prettier/standalone', 'prettier/parser-babylon'], (prettier, babylon) => {
-        const currValue = instance.doc.getValue();
-        const options = Object.assign({},
-          defaultPrettierOptions,
-          {
-            printWidth: instance.display.maxLineLength,
-            plugins: [babylon],
-          });
-        instance.doc.setValue(prettier.format(currValue, options));
-      });
-    });
-
-    this._bindCMHandler('changes', () => {
-      clearTimeout(this._updateTimer);
-      this._updateTimer = setTimeout(this._onContentChangeRight.bind(this), 200);
-    }, "right");
-    this._bindCMHandler('changes', () => {
-      clearTimeout(this._updateTimer);
-      this._updateTimer = setTimeout(this._onContentChangeLeft.bind(this), 200);
-    }, "left");
-    this._bindCMHandler('cursorActivity', () => {
-      clearTimeout(this._updateTimer);
-      this._updateTimer = setTimeout(this._onActivityRight.bind(this, true), 100);
-    }, "right");
-    this._bindCMHandler('cursorActivity', () => {
-      clearTimeout(this._updateTimer);
-      this._updateTimer = setTimeout(this._onActivityLeft.bind(this, true), 100);
-    }, "left");
-    this._subscriptions.push(
-      PubSub.subscribe('PANEL_RESIZE', () => {
-        // TODO dispatch to childs
-      }),
-      PubSub.subscribe('CHANGE_DIFF_CONTEXT', (_, graphNodes) => {
-        const { node, root } = graphNodes
-        console.log(684, node, root)
-        const x = graphNodesToSecenario(graphNodes,
-          this.state.value.instance.repo,
-          this.state.value.instance.commitIdBefore,
-          this.state.value.instance.commitIdAfter)
-
-        this.setState({
-          ...this.state,
-          value: {
-            ...this.state.value,
-            ...x,
-          },
-          forced: true
-        })
-      }),
-    );
-
-    if (this.props.highlight) {
-      this._markerRange = null;
-      this._mark = null;
-      this._subscriptions.push(
-        PubSub.subscribe('HIGHLIGHT', (_, { node, range }) => {
-          if (!range) {
-            return;
-          }
-          // TODO dispatch to childs
-
-          // console.log(1243, this.codeMirror, this.codeMirror.edit.state.diffViews[0].orig)
-          // let docRight = this.codeMirror.edit.getDoc();
-          // let docLeft = this.codeMirror.edit.state.diffViews[0].orig.getDoc();
-          // this._markerRange = range;
-          // // We only want one mark at a time.
-          // if (this._mark) {
-          //   this._mark.clear();
-          // }
-          // if (this._mark_orig) {
-          //   this._mark_orig.clear();
-          // }
-          // let [startRight, endRight] = range.map(index => this._posFromIndex(docRight, index));
-          // let [startLeft, endLeft] = range.map(index => this._posFromIndex(docLeft, index));
-          // if (!startRight || !endRight) {
-          //   this._markerRange = this._mark = null;
-          //   return;
-          // }
-          // if (node.side === "right") {
-          //   this._mark = this.codeMirror.edit.markText(
-          //     startRight,
-          //     endRight,
-          //     { className: 'marked' },
-          //   );
-          // }
-          // if (node.side === "left") {
-          //   this._mark_orig = this.codeMirror.edit.state.diffViews[0].orig.markText(
-          //     startLeft,
-          //     endLeft,
-          //     { className: 'marked' },
-          //   );
-          // }
-        }),
-
-        PubSub.subscribe('CLEAR_HIGHLIGHT', (_, { range } = {}) => {
-          if (!range ||
-            this._markerRange &&
-            range[0] === this._markerRange[0] &&
-            range[1] === this._markerRange[1]
-          ) {
-            this._markerRange = null;
-            if (this._mark) {
-              this._mark.clear();
-              this._mark = null;
-            }
-            if (this._mark_orig) {
-              this._mark_orig.clear();
-              this._mark_orig = null;
-            }
-          }
-        }),
-      );
-    }
-
-    if (this.props.error) {
-      this._setError(this.props.error);
-    }
-  }
-
   componentWillUnmount() {
     clearTimeout(this._updateTimer);
     this._unbindHandlers();
@@ -523,8 +498,8 @@ export default class MultiEditor extends React.Component {
   // }
 
 
-  _bindCMHandler(event, handler, side) {
-    this._CMHandlers.push([event, handler, side ? side : ""]);
+  _bindCMHandler(event, handler, side = "") {
+    this._CMHandlers.push([event, handler, side]);
     // TODO dispatch to childs
     // if (side === "right") {
     //   this.codeMirror.edit.on(event, handler);
@@ -608,33 +583,34 @@ export default class MultiEditor extends React.Component {
   render() {
     return this._layoutRenderer(scenario2Layout(this.state.value));
   }
+
+
+  static propTypes = {
+    value: PropTypes.object,
+    highlight: PropTypes.bool,
+    lineNumbers: PropTypes.bool,
+    readOnly: PropTypes.bool,
+    onContentChange: PropTypes.func,
+    onActivity: PropTypes.func,
+    posFromIndex: PropTypes.func,
+    error: PropTypes.object,
+    mode: PropTypes.string,
+    enableFormatting: PropTypes.bool,
+    keyMap: PropTypes.string,
+  };
+
+  static defaultProps = {
+    value: {},
+    highlight: true,
+    lineNumbers: true,
+    readOnly: false,
+    mode: 'javascript',
+    keyMap: 'default',
+    onContentChange: (x) => { },
+    onActivity: () => { },
+  };
+
 }
-
-MultiEditor.propTypes = {
-  value: PropTypes.object,
-  highlight: PropTypes.bool,
-  lineNumbers: PropTypes.bool,
-  readOnly: PropTypes.bool,
-  onContentChange: PropTypes.func,
-  onActivity: PropTypes.func,
-  posFromIndex: PropTypes.func,
-  error: PropTypes.object,
-  mode: PropTypes.string,
-  enableFormatting: PropTypes.bool,
-  keyMap: PropTypes.string,
-};
-
-MultiEditor.defaultProps = {
-  value: {},
-  highlight: true,
-  lineNumbers: true,
-  readOnly: false,
-  mode: 'javascript',
-  keyMap: 'default',
-  onContentChange: (x) => { },
-  onActivity: () => { },
-};
-
 
 
 
