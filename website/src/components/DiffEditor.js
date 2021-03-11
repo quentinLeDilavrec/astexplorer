@@ -31,6 +31,8 @@ export default class DiffEditor extends React.Component {
       left: props.left,
       mode: props.mode,
     };
+    this._posFromIndex.bind(this)
+    this.setMirrorsValue.bind(this)
   }
   // componentDidCatch(error, errorInfo) {
   //   console.error(error, errorInfo)
@@ -233,6 +235,7 @@ export default class DiffEditor extends React.Component {
     // if (!this.codeMirror || !this.codeMirror.editor() || !this.codeMirror.leftOriginal()) {
     //   return;
     // }
+    debugger
     if ((typeof before.doc === 'string' || typeof after.doc === 'string')) {
       const r = {
         before: typeof this.state.left === 'string' || !this.state.left.error && this.codeMirror ? this.codeMirror.leftOriginal().getDoc() : undefined,
@@ -254,6 +257,33 @@ export default class DiffEditor extends React.Component {
       }, () => console.error(before.doc, after.doc))
       return r
     }
+    this.setState({
+      ...this.state,
+      force: true,
+      left: {
+        ...before,
+      },
+      right: {
+        ...after,
+      },
+    }, () => {
+
+      const r = {
+        before: this.codeMirror.leftOriginal().swapDoc(before.doc),
+        after: this.codeMirror.editor().swapDoc(after.doc),
+      }
+      if (before.focus && after.focus) {
+        this.codeMirror // TODO unsync diff viewer
+      }
+      debugger
+      if (before.focus || before.start !== undefined) {
+        this.markIt(this.codeMirror.leftOriginal(), before.ranges || [before]);
+      }
+      if (after.focus || after.start !== undefined) {
+        this.markIt(this.codeMirror.editor(), after.ranges || [after]);
+      }
+    })
+
     const r = {
       before: this.codeMirror.leftOriginal().swapDoc(before.doc),
       after: this.codeMirror.editor().swapDoc(after.doc),
@@ -484,29 +514,32 @@ export default class DiffEditor extends React.Component {
     if (this.props.highlight) {
       this._markerRange = null;
       this._mark = null;
+      const _this = this
       this._subscriptions.push(
         PubSub.subscribe('HIGHLIGHT', (_, { node, range }) => {
           if (!range) {
             return;
           }
-          let docRight = this.codeMirror.edit.getDoc();
-          let docLeft = this.codeMirror.edit.state.diffViews[0].orig.getDoc();
-          this._markerRange = range;
+          let docRight = _this.codeMirror.edit.getDoc();
+          let docLeft = _this.codeMirror.edit.state.diffViews[0].orig.getDoc();
+          _this._markerRange = range;
           // We only want one mark at a time.
-          if (this._mark) {
-            this._mark.clear();
+          if (_this._mark) {
+            _this._mark.clear();
           }
-          if (this._mark_orig) {
-            this._mark_orig.clear();
+          if (_this._mark_orig) {
+            _this._mark_orig.clear();
           }
-          let [startRight, endRight] = range.map(index => this._posFromIndex(docRight, index));
-          let [startLeft, endLeft] = range.map(index => this._posFromIndex(docLeft, index));
+          let [startRight, endRight] = range.map(index => _this._posFromIndex(docRight, index));
+          let [startLeft, endLeft] = range.map(index => _this._posFromIndex(docLeft, index));
           if (!startRight || !endRight) {
-            this._markerRange = this._mark = null;
+            _this._markerRange = _this._mark = null;
             return;
           }
-          if (node.side === "right") {
-            this._mark = this.codeMirror.edit.markText(
+          const rightF = _this.state.left.file
+          debugger
+          if (node.side === "right" && rightF === node.file) {
+            _this._mark = _this.codeMirror.edit.markText(
               startRight,
               endRight,
               {
@@ -515,8 +548,9 @@ export default class DiffEditor extends React.Component {
               },
             );
           }
-          if (node.side === "left") {
-            this._mark_orig = this.codeMirror.edit.state.diffViews[0].orig.markText(
+          const leftF = _this.state.left.file
+          if (node.side === "left" && leftF === node.file) {
+            _this._mark_orig = _this.codeMirror.edit.state.diffViews[0].orig.markText(
               startLeft,
               endLeft,
               {

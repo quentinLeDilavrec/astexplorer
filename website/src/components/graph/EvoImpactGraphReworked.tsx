@@ -406,8 +406,8 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           "charge",
           d3
             .forceManyBody<Unstack<typeof graph.nodes>>()
-            .distanceMin(2000)
-            .strength((d) => (isTest(d) ? (d.value.isTest ? -60 : -60) : -1000))
+            .distanceMin(3000)
+            .strength((d) => 5000)//(isTest(d) ? (d.value.isTest ? 60 : 60) : 1000))
         )
         // .force("y", d3.forceY(d => {
         //   if (isTest(d)) {
@@ -449,7 +449,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             })
             .strength(0.5)
         )
-        .force("centering", d3.forceCenter(width / 2, height / 2));
+        .force("centering", d3.forceCenter(0,0));//width / 2, height / 2));
 
       const adjlist = [];
 
@@ -475,7 +475,14 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             "charge",
             d3
               .forceManyBody()
-              .distanceMax(1000)
+              .distanceMin(3000)
+              .strength((d) => 5000)
+          )
+          .force(
+            "charge2",
+            d3
+              .forceManyBody()
+              .distanceMax(3000)
               .strength((d) => -1000)
           )
           .force(
@@ -813,14 +820,14 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
       nodes.on("mouseover.highlight", (d) => {
         // PubSub.publish('HIGHLIGHT_DIFF', { node: {side:'left'}, range: [d.value.start, d.value.end] });
         PubSub.publish("HIGHLIGHT", {
-          node: { side: "left" },
+          node: { ...d.value, side: "left" },
           range: [d.value.start, d.value.end],
         });
       });
       nodes.on("mouseleave.highlight", (d) => {
         // PubSub.publish('CLEAR_HIGHLIGHT_DIFF', { node: {side:'left'}, range: [d.value.start, d.value.end] });
         PubSub.publish("CLEAR_HIGHLIGHT", {
-          node: { side: "left" },
+          node: { ...d.value,  side: "left" },
           range: [d.value.start, d.value.end],
         });
       });
@@ -884,7 +891,6 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           d.evolutions?.forEach(
             (x) => eCount < Max_Evolutions && selectedEvolutionIds.add(x.id)
           );
-          debugger;
           d.effects2.forEach((x: Dep<typeof d>) => {
             searchEffects(x.target);
           });
@@ -897,7 +903,6 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           }
           visited[key] = d.value
           d.evolutions?.forEach((x) => eCount < Max_Evolutions && selectedEvolutionIds.add(x.id));
-          debugger;
           d.causes2.forEach((x: Dep<typeof d>) => {
             searchCauses(x.source);
           });

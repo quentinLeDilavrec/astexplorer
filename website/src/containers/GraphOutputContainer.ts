@@ -63,6 +63,8 @@ function mapDispatchToProps(
     }) =>
       dispatch(
         batchActions([
+          actions["Evolutions/Status/Selected/reset"](),
+          actions["Impacts/Status/Selected/reset"](),
           actions["Cursor/set"](x.cursor),
           actions["Evolutions/Status/Selected/enable"](
             ...Array.from(x.selectedEvolutionIds)

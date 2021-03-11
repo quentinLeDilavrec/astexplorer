@@ -203,18 +203,18 @@ function Pane({
   layout,
   mode,
   docs = {},
-  key = "",
+  keyS = "",
 }: {
   layout: Layout;
   mode: any;
   docs?: any;
-  key?: string;
+  keyS?: string;
 }) {
   if ("split" in layout && layout.split === Orientation.vertical) {
     return (
-      <SplitPane key={key} className="splitpane" onResize={resize}>
+      <SplitPane key={keyS+".sp"} className="splitpane" onResize={resize}>
         {layout.content.map((x, i) => (
-          <Pane layout={x} docs={docs} key={key + "." + i} mode={mode}></Pane>
+          <Pane layout={x} docs={docs} keyS={keyS + "." + i} mode={mode}></Pane>
         ))}
       </SplitPane>
     );
@@ -222,20 +222,20 @@ function Pane({
     if (layout.content.length <= 2) {
       return (
         <SplitPane
-          key={key}
+          key={keyS+".sp"}
           className="splitpane"
           vertical={true}
           onResize={resize}
         >
           {layout.content.map((x, i) => (
-            <Pane layout={x} docs={docs} key={key + "." + i} mode={mode}></Pane>
+            <Pane layout={x} docs={docs} keyS={keyS + "." + i} mode={mode}></Pane>
           ))}
         </SplitPane>
       );
     } else {
       return (
         <SplitPane
-          key={key}
+          key={keyS}
           className="splitpane"
           vertical={true}
           onResize={resize}
@@ -247,7 +247,7 @@ function Pane({
                 content: layout.content.slice(0, layout.content.length / 2),
               }}
               docs={docs}
-              key={key + "." + 0}
+              keyS={keyS + "." + 0}
               mode={mode}
             ></Pane>
           }
@@ -258,7 +258,7 @@ function Pane({
                 content: layout.content.slice(layout.content.length / 2),
               }}
               docs={docs}
-              key={key + "." + 1}
+              keyS={keyS + "." + 1}
               mode={mode}
             ></Pane>
           }
@@ -269,7 +269,7 @@ function Pane({
     // TODO enable wrapping in codemirrors
     return (
       <DiffEditor
-        key={key}
+        key={keyS + '.de'}
         // {...this.props}
         value={"Getting content..."}
         oldvalue={"Getting content..."}
@@ -315,7 +315,7 @@ function Pane({
   } else if ("file" in layout) {
     return (
       <Editor2
-        key={key}
+        key={keyS +'.e'}
         value={"Getting content..."}
         ref={async (y) => {
           if (y) {
