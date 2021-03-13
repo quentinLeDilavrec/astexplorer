@@ -20,7 +20,7 @@ enum Orientation {
   horizontal,
 }
 
-type File = {
+export type File = {
   repository: string;
   commitId: string;
   file: any;
@@ -32,15 +32,15 @@ export type Range = File & {
   type: string;
 };
 
-enum Marking {
+export enum Marking {
   from = "marked-evo-from",
   to = "marked-evo-to",
   impacted = "marked-impacted",
 }
 
-type Marked = Range & {marking: Marking}
+export type Marked = Range & { marking: Marking };
 
-type Diff =
+export type Diff =
   | {
       before: Marked;
       after: Marked;
@@ -54,14 +54,13 @@ type Diff =
       after: File;
     };
 
-type Nature = "inserted" | "deleted" | "impacted";
 type Layout =
   | {
       split: Orientation;
       content: Layout[];
     }
   | Diff
-  | (Marked & { nature: Nature });
+  | Marked;
 
 type Evolution = {
   type: string;
@@ -117,7 +116,11 @@ function flattenEvo(
   }
 }
 
-function extractBefore(before: Range[], afterC: string, mark = Marking.from): Diff[] {
+function extractBefore(
+  before: Range[],
+  afterC: string,
+  mark = Marking.from
+): Diff[] {
   return before.map((x) => {
     return {
       before: {
@@ -133,7 +136,11 @@ function extractBefore(before: Range[], afterC: string, mark = Marking.from): Di
   });
 }
 
-function extractAfter(after: Range[], beforC: string, mark = Marking.to): Diff[] {
+function extractAfter(
+  after: Range[],
+  beforC: string,
+  mark = Marking.to
+): Diff[] {
   return after.map((x) => {
     return {
       before: {
@@ -187,8 +194,44 @@ function evoImp2Layout(evoImp: EvoImp, beforC: string, afterC: string): Layout {
       {
         split: Orientation.horizontal,
         content: [
-          ...extractBefore(evoImp.impactsBefore, afterC, Marking.impacted),
-          ...extractAfter(evoImp.impactsAfter, beforC, Marking.impacted),
+          // ...extractBefore(evoImp.impactsBefore, afterC, Marking.impacted),
+          ...evoImp.impactsBefore.map((x) =>
+            Math.random() > 0.5
+              ? {
+                  ...x,
+                  marking: Marking.impacted,
+                }
+              : {
+                  before: {
+                    ...x,
+                    marking: Marking.impacted,
+                  },
+                  after: {
+                    repository: x.repository,
+                    file: x.file,
+                    commitId: afterC,
+                  },
+                }
+          ),
+          // ...extractAfter(evoImp.impactsAfter, beforC, Marking.impacted),
+          ...evoImp.impactsAfter.map((x) =>
+            Math.random() > 0.5
+              ? {
+                  ...x,
+                  marking: Marking.impacted,
+                }
+              : {
+                  before: {
+                    repository: x.repository,
+                    file: x.file,
+                    commitId: beforC,
+                  },
+                  after: {
+                    ...x,
+                    marking: Marking.impacted,
+                  },
+                }
+          ),
         ],
       },
     ],
@@ -203,41 +246,41 @@ function Pane({
   layout,
   mode,
   docs = {},
-  keyS = "",
+  keyS = "0",
+  error,
 }: {
   layout: Layout;
   mode: any;
   docs?: any;
   keyS?: string;
+  error?: Error;
 }) {
-  if ("split" in layout && layout.split === Orientation.vertical) {
-    return (
-      <SplitPane key={keyS+".sp"} className="splitpane" onResize={resize}>
-        {layout.content.map((x, i) => (
-          <Pane layout={x} docs={docs} keyS={keyS + "." + i} mode={mode}></Pane>
-        ))}
-      </SplitPane>
-    );
-  } else if ("split" in layout && layout.split === Orientation.horizontal) {
+  if ("split" in layout) {
     if (layout.content.length <= 2) {
       return (
         <SplitPane
-          key={keyS+".sp"}
+          key={keyS + ".sp"}
           className="splitpane"
-          vertical={true}
+          vertical={layout.split === Orientation.horizontal}
           onResize={resize}
         >
           {layout.content.map((x, i) => (
-            <Pane layout={x} docs={docs} keyS={keyS + "." + i} mode={mode}></Pane>
+            <Pane
+              layout={x}
+              docs={docs}
+              key={keyS + "." + i}
+              keyS={keyS + "." + i}
+              mode={mode}
+            ></Pane>
           ))}
         </SplitPane>
       );
     } else {
       return (
         <SplitPane
-          key={keyS}
+          key={keyS + ".sp"}
           className="splitpane"
-          vertical={true}
+          vertical={layout.split === Orientation.horizontal}
           onResize={resize}
         >
           {
@@ -247,8 +290,10 @@ function Pane({
                 content: layout.content.slice(0, layout.content.length / 2),
               }}
               docs={docs}
+              key={keyS + "." + 0}
               keyS={keyS + "." + 0}
               mode={mode}
+              error={error}
             ></Pane>
           }
           {
@@ -258,8 +303,10 @@ function Pane({
                 content: layout.content.slice(layout.content.length / 2),
               }}
               docs={docs}
+              key={keyS + "." + 1}
               keyS={keyS + "." + 1}
               mode={mode}
+              error={error}
             ></Pane>
           }
         </SplitPane>
@@ -269,10 +316,10 @@ function Pane({
     // TODO enable wrapping in codemirrors
     return (
       <DiffEditor
-        key={keyS + '.de'}
+        key={keyS + ".de"}
         // {...this.props}
         value={"Getting content..."}
-        oldvalue={"Getting content..."}
+        oldValue={"Getting content..."}
         // value={x.after.content}
         // oldvalue={x.before.content}
         ref={async (y) => {
@@ -310,12 +357,13 @@ function Pane({
           return y;
         }}
         mode={mode}
+        error={error}
       />
     );
   } else if ("file" in layout) {
     return (
       <Editor2
-        key={keyS +'.e'}
+        key={keyS + ".e"}
         value={"Getting content..."}
         ref={async (y) => {
           if (y) {
@@ -337,6 +385,7 @@ function Pane({
           return y;
         }}
         mode={mode}
+        error={error}
       />
     );
   } else {
@@ -351,6 +400,7 @@ export default function MultiEditor({
   getEvolution,
   instance,
   mode,
+  error,
 }: P) {
   if (selectedEvolutions === undefined) {
     return null;
@@ -364,33 +414,45 @@ export default function MultiEditor({
       }
       return acc;
     }, [] as any[]);
-    if (red.length > 0 && (Object.keys(impactsBefore).length<=0 || Object.keys(impactsBefore).length<=0)) {
+    if (
+      red.length > 0 &&
+      (Object.keys(impactsBefore).length <= 0 ||
+        Object.keys(impactsBefore).length <= 0)
+    ) {
       return (
         <Pane
           layout={evolutions2Layout(
-            red.slice(0,Math.min(red.length,8)),
+            red.slice(0, Math.min(red.length, 8)),
             instance.commitIdBefore || "",
             instance.commitIdAfter
           )}
           mode={mode}
+          error={error}
         ></Pane>
       );
     } else {
-      const iB = Object.values(impactsBefore)
-      const iA = Object.values(impactsAfter)
+      const iB = Object.values(impactsBefore);
+      const iA = Object.values(impactsAfter);
       return (
         <Pane
           layout={evoImp2Layout(
             {
-              evolutions: red.slice(0,Math.min(red.length,6)),
-              impactsBefore: iB.slice(0,Math.min(iB.length,6)),
+              evolutions: red.slice(0, Math.min(red.length, 6)),
+              impactsBefore: iB.slice(0, Math.min(iB.length, 6)),
               // impactsBefore: iB.slice(0,Math.min(Math.ceil((iB.length/ (iB.length+iA.length)*iB.length)),6)),
-              impactsAfter: iA.slice(0,Math.min(Math.ceil((iA.length/ (iB.length+iA.length))*iA.length),6)),
+              impactsAfter: iA.slice(
+                0,
+                Math.min(
+                  Math.ceil((iA.length / (iB.length + iA.length)) * iA.length),
+                  6
+                )
+              ),
             },
             instance.commitIdBefore || "",
             instance.commitIdAfter
           )}
           mode={mode}
+          error={error}
         ></Pane>
       );
     }
@@ -482,20 +544,24 @@ const fileHandler = {
   },
 };
 
-async function getContent({ repository, commitId, file }: File, mode, docs) {
-  const k = repository + commitId + file;
-
+export async function getContent(
+  { repository, commitId, file }: File,
+  mode: string,
+  docs: { [k: string]: CodeMirror.Doc }
+) {
+  const k = repository + '/' + commitId + '/' + file;
+  const doc = docs[k];
   return (
-    (docs[k] && docs[k].linkedDoc({ mode })) ||
+    (doc && doc.linkedDoc({ mode })) ||
     RemoteFileService(fileHandler, {
       repo: repository,
       commitId,
       path: file,
     })
       .then((x) => {
+        const doc = docs[k];
         return (docs[k] =
-          (docs[k] && docs[k].linkedDoc({ mode })) ||
-          CodeMirror.Doc(x.content, mode));
+          (doc && doc.linkedDoc({ mode })) || CodeMirror.Doc(x.content, mode));
       })
       .catch((x) => {
         // console.error(x)

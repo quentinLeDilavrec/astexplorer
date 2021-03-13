@@ -84,7 +84,7 @@ export default function EvoSelect({parseResult, position, onToggleEvo, selectedE
           </span>
         ))}
       </div>
-      <div ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT', undefined);}}>
+      <div ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT', {});}}>
         <SelectedNodeProvider>
           <EvolutionsContainer
             value={parseResult.ast}

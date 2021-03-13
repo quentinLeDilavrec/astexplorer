@@ -84,7 +84,7 @@ export default function CoEvoSelect({parseResult, position, onToggleEvo, selecte
           </span>
         ))}
       </div>
-      <div ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT', undefined);}}>
+      <div ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT', {});}}>
         <SelectedNodeProvider>
           <CoEvolutionsContainer
             value={parseResult.ast}

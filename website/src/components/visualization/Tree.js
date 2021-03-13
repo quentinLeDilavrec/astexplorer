@@ -84,7 +84,7 @@ export default function Tree({parseResult, position}) {
           </span>
         ))}
       </div>
-      <ul ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT', undefined);}}>
+      <ul ref={rootElement} onMouseLeave={() => {PubSub.publish('CLEAR_HIGHLIGHT', {});}}>
         <SelectedNodeProvider>
           <Element
             value={parseResult.ast}

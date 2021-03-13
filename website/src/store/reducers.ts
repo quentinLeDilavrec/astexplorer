@@ -448,6 +448,7 @@ function evolutionResult(
     case "Evolutions/Status/set":
       return { ...state, status: action.payload };
     case "Evolutions/Status/Selected/toggle":
+      debugger
       return {
         ...state,
         selectedEvos: [
@@ -457,6 +458,7 @@ function evolutionResult(
         ],
       };
     case "Evolutions/Status/Selected/enable":
+      debugger
       return {
         ...state,
         selectedEvos: isSingleton(action.payload)
@@ -465,7 +467,7 @@ function evolutionResult(
               !state.selectedEvos[action.payload[0]],
               ...state.selectedEvos.slice(action.payload[0] + 1),
             ]
-          : state.selectedEvos.map((x, i) => x || i in action.payload),
+          : state.selectedEvos.map((x, i) => x || action.payload.indexOf(i) >= 0 ),
       };
     case "Evolutions/Status/Selected/reset":
       return {
