@@ -175,46 +175,46 @@ export default class Editor2 extends React.Component<P, S> {
     if (this.props.highlight) {
       this._markerRange = null;
       this._mark = null;
-      this._subscriptions.push(
-        PubSub.subscribe("HIGHLIGHT", (_, { range }) => {
-          if (!range) {
-            return;
-          }
-          let doc = this.codeMirror.getDoc();
-          this._markerRange = range;
-          // We only want one mark at a time.
-          if (this._mark) {
-            this._mark.clear();
-          }
-          let [start, end] = range.map((index) => doc.posFromIndex(index));
-          if (!start || !end) {
-            this._markerRange = this._mark = null;
-            return;
-          }
-          this._mark = this.codeMirror.markText(start, end, {
-            className: "marked",
-            shared: true,
-          });
-        }),
+      // this._subscriptions.push(
+      //   PubSub.subscribe("HIGHLIGHT", (_, { range }) => {
+      //     if (!range) {
+      //       return;
+      //     }
+      //     let doc = this.codeMirror.getDoc();
+      //     this._markerRange = range;
+      //     // We only want one mark at a time.
+      //     if (this._mark) {
+      //       this._mark.clear();
+      //     }
+      //     let [start, end] = range.map((index) => doc.posFromIndex(index));
+      //     if (!start || !end) {
+      //       this._markerRange = this._mark = null;
+      //       return;
+      //     }
+      //     this._mark = this.codeMirror.markText(start, end, {
+      //       className: "marked",
+      //       shared: true,
+      //     });
+      //   }),
 
-        PubSub.subscribe(
-          "CLEAR_HIGHLIGHT",
-          (_, { range }: { range: [number, number] }) => {
-            if (
-              !range ||
-              (this._markerRange &&
-                range[0] === this._markerRange[0] &&
-                range[1] === this._markerRange[1])
-            ) {
-              this._markerRange = null;
-              if (this._mark) {
-                this._mark.clear();
-                this._mark = null;
-              }
-            }
-          }
-        )
-      );
+      //   PubSub.subscribe(
+      //     "CLEAR_HIGHLIGHT",
+      //     (_, { range }: { range: [number, number] }) => {
+      //       if (
+      //         !range ||
+      //         (this._markerRange &&
+      //           range[0] === this._markerRange[0] &&
+      //           range[1] === this._markerRange[1])
+      //       ) {
+      //         this._markerRange = null;
+      //         if (this._mark) {
+      //           this._mark.clear();
+      //           this._mark = null;
+      //         }
+      //       }
+      //     }
+      //   )
+      // );
     }
 
     if (this.props.error) {
@@ -247,7 +247,8 @@ export default class Editor2 extends React.Component<P, S> {
   }
   markIt(
     editor: CodeMirror.Editor,
-    ranges: { start: number; end: number; marking?: string }[]
+    ranges: { start: number; end: number; marking?: string }[],
+    shared = false,
   ) {
     let first = Infinity;
     for (let i = 0; i < ranges.length; i++) {
@@ -262,7 +263,7 @@ export default class Editor2 extends React.Component<P, S> {
       const to = editor.posFromIndex(end + 1);
       editor.markText(from, to, {
         className: range.marking,
-        shared:true // useful ?
+        shared,
       });
     }
     this.scrollTo(editor, editor.posFromIndex(first));
@@ -287,7 +288,7 @@ export default class Editor2 extends React.Component<P, S> {
       // && (this.state.value = value)) {// TODO should not set state manually
       const r = this.codeMirror.swapDoc(doc);
       if ('start' in param) {
-        this.markIt(this.codeMirror, [param]);
+        this.markIt(this.codeMirror, [{...param, marking: "marked-current"}]);
       }
       return r;
     }

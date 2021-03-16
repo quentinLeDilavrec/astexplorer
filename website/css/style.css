@@ -488,6 +488,10 @@ li.entry {
   background-color: hsla(185, 100%, 51%, 0.4);
 }
 
+.CodeMirror .marked-current {
+  font-weight: bolder;
+}
+
 .CodeMirror .marked.marked-impacted {
   background-image: repeating-linear-gradient(-53deg, hsla(56, 100%, 51%, 0.4) 0px 5px, hsla(185, 100%, 51%, 0.4) 5px 10px);
   background-attachment: fixed;

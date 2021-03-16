@@ -9,10 +9,14 @@ import { stringify } from "query-string";
  */
 
 /**
- * 
- * @param {defaultDifferInterface} fileHandler 
+ * @template T
+ * @param {{
+    id: string;
+    processFile(json: any): T;
+}} fileHandler 
  * @param {FileQuery} query 
  * @param {RequestInit} options 
+ * @return {Promise<T>}
  */
 export default async function RemoteFileService(fileHandler, query, options = {}) {
     const response =

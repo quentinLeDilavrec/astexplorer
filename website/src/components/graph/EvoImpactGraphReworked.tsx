@@ -4,7 +4,7 @@ import * as d3 from "d3";
 import PubSub from "pubsub-js";
 import isequal from "lodash.isequal";
 import { GraphP } from "../GraphOutput";
-import { Range } from "../MultiEditor2";
+import { File, Range } from "../MultiEditor2";
 
 const ONLY_TESTS_DECLS = false;
 
@@ -19,8 +19,6 @@ type Node<T> = {
   value: T;
   id: number;
   index?: number;
-  causes2: any[];
-  effects2: any[];
   isRoot?: boolean;
   evolutions?: any[];
 };
@@ -32,55 +30,38 @@ type ById<T> = {
 function preprocess(x: NonNullable<GraphP["graph"]>, state: any = {}) {
   const ranges = x.ranges;
   const impacts = x.impacts;
-  type intNode = Node<Unstack<typeof ranges>>;
+  type intNode = Node<Unstack<typeof ranges>> & {
+    causes2: any[];
+    effects2: any[];
+  };
+  type intLink = {
+    target: any;
+    source: any;
+    content?: any;
+    type?: any;
+  };
+  let NodesCount = x.ranges.length;
   let data = {
+    files: [] as (Node<File> & { isTestFile?: boolean })[],
+    fileLinks: [] as {
+      target: any;
+      source: any;
+    }[],
     nodes: [] as intNode[],
-    links: [] as any[],
+    links: [] as intLink[],
     roots: x["roots"] || ([] as any[]),
     tests: x["tests"] || ([] as any[]),
     byId: {} as ById<intNode>,
   };
   data = { ...state, ...data };
-  const nodes = [];
-  // const nodes_more = {}
-  const rangesMap: ById<intNode> = {};
-  let count = 0;
-  const wanted = ranges.findIndex((x) => x.sig && x.sig === "create()");
-  const computed = {};
-  const next_wanted = {};
-  const next_wanted_file = {};
+  const rangesMapBefore: ById<intNode> = {};
+  const rangesMapAfter: ById<intNode> = {};
   for (let i = 0; i < impacts.length; i++) {
     const iterator = impacts[i];
     if (!iterator) {
       continue;
     }
-    // // if (
-    // //   iterator.content.type !== "Change Return Type"
-    // // // && iterator.content.type !== "Change Variable Type"
-    // // // && iterator.content.type !== "Change Parameter Type"
-    // // ) {
-    // //   continue
-    // // }
-    // // if (count > 200) {
-    // //   break
-    // // } else count++
-    // if (iterator && (iterator.causes.some(x => x === wanted) || iterator.effects.some(x => x === wanted))) {
-    //   console.log(iterator)
-    // } else if (iterator && iterator.effects.some(y => ranges[y].file === "core/src/main/java/com/graphhopper/storage/GraphBuilder.java")) {
-    //   console.log(iterator)
-    // } else continue
-    computed[i] = i;
     for (const cause of iterator.causes) {
-      // if (typeof cause !== "number") {
-      //   const aaa = nodes_more[JSON.stringify(cause)]
-      //   if (aaa === undefined) {
-      //     tmp_cause = nodes.length
-      //     nodes.push(cause)
-      //     nodes_more[JSON.stringify(cause)] = tmp_cause
-      //   } else {
-      //     tmp_cause = aaa
-      //   }
-      // } else {
       const element = ranges[cause];
       if (!element) {
         console.error(cause + " not in ranges");
@@ -93,22 +74,10 @@ function preprocess(x: NonNullable<GraphP["graph"]>, state: any = {}) {
         effects2: [] as any[],
       };
       data.byId[cause] = tmp;
-      rangesMap[element.file + ":" + element.start + "-" + element.end] = tmp;
-      next_wanted[cause] = cause;
-      next_wanted_file[element.file] = element.file;
-      // }
+      rangesMapBefore[
+        element.file + ":" + element.start + "-" + element.end
+      ] = tmp;
       for (const effect of iterator.effects) {
-        // let tmp_effect = effect
-        // if (typeof effect !== "number") {
-        //   const bbb = nodes_more[JSON.stringify(effect)]
-        //   if (bbb === undefined) {
-        //     tmp_effect = nodes.length
-        //     nodes.push(effect)
-        //     nodes_more[JSON.stringify(effect)] = tmp_effect
-        //   } else {
-        //     tmp_effect = bbb
-        //   }
-        // } else {
         const element = ranges[effect];
         if (!element) {
           console.error(effect + " not in ranges");
@@ -121,9 +90,9 @@ function preprocess(x: NonNullable<GraphP["graph"]>, state: any = {}) {
           effects2: [],
         };
         data.byId[effect] = tmp;
-        rangesMap[element.file + ":" + element.start + "-" + element.end] = tmp;
-        next_wanted_file[element.file] = element.file;
-        // }
+        rangesMapBefore[
+          element.file + ":" + element.start + "-" + element.end
+        ] = tmp;
         data.links.push({
           target: effect,
           source: cause,
@@ -139,47 +108,7 @@ function preprocess(x: NonNullable<GraphP["graph"]>, state: any = {}) {
       if (!iterator) {
         continue;
       }
-      // if (
-      //   iterator.content.type !== "Change Return Type"
-      // // && iterator.content.type !== "Change Variable Type"
-      // // && iterator.content.type !== "Change Parameter Type"
-      // ) {
-      //   continue
-      // }
-      // if (count > 200) {
-      //   break
-      // } else count++
-      if (
-        (computed[i] === i &&
-          iterator.causes.some((x) => next_wanted[x] === x)) ||
-        iterator.effects.some((x) => next_wanted[x] === x)
-      ) {
-        console.log(iterator);
-      } else if (
-        (computed[i] === i &&
-          iterator.causes.some((x) => {
-            const tmp = data.byId[x];
-            return tmp && next_wanted_file[tmp.value.file] === tmp.value.file;
-          })) ||
-        iterator.effects.some((x) => {
-          const tmp = data.byId[x];
-          return tmp && next_wanted_file[tmp.value.file] === tmp.value.file;
-        })
-      ) {
-        console.log(iterator);
-      } else continue;
-      computed[i] = i;
       for (const cause of iterator.causes) {
-        // if (typeof cause !== "number") {
-        //   const aaa = nodes_more[JSON.stringify(cause)]
-        //   if (aaa === undefined) {
-        //     tmp_cause = nodes.length
-        //     nodes.push(cause)
-        //     nodes_more[JSON.stringify(cause)] = tmp_cause
-        //   } else {
-        //     tmp_cause = aaa
-        //   }
-        // } else {
         const element = ranges[cause];
         if (!element) {
           console.error(cause + " not in ranges");
@@ -192,22 +121,10 @@ function preprocess(x: NonNullable<GraphP["graph"]>, state: any = {}) {
           effects2: [],
         };
         data.byId[cause] = tmp;
-        rangesMap[element.file + ":" + element.start + "-" + element.end] = tmp;
-        next_wanted[cause] = cause;
-        next_wanted_file[element.file] = element.file;
-        // }
+        rangesMapBefore[
+          element.file + ":" + element.start + "-" + element.end
+        ] = tmp;
         for (const effect of iterator.effects) {
-          // let tmp_effect = effect
-          // if (typeof effect !== "number") {
-          //   const bbb = nodes_more[JSON.stringify(effect)]
-          //   if (bbb === undefined) {
-          //     tmp_effect = nodes.length
-          //     nodes.push(effect)
-          //     nodes_more[JSON.stringify(effect)] = tmp_effect
-          //   } else {
-          //     tmp_effect = bbb
-          //   }
-          // } else {
           const element = ranges[effect];
           if (!element) {
             console.error(effect + " not in ranges");
@@ -220,12 +137,9 @@ function preprocess(x: NonNullable<GraphP["graph"]>, state: any = {}) {
             effects2: [],
           };
           data.byId[effect] = tmp;
-          rangesMap[
+          rangesMapBefore[
             element.file + ":" + element.start + "-" + element.end
           ] = tmp;
-          next_wanted[effect] = effect;
-          next_wanted_file[element.file] = element.file;
-          // }
           data.links.push({
             target: effect,
             source: cause,
@@ -239,60 +153,113 @@ function preprocess(x: NonNullable<GraphP["graph"]>, state: any = {}) {
   const roots = {};
   if (x.evolutions) {
     for (let evo of x.evolutions) {
-      evo.before = evo.before;
-      evo.after = evo.after;
-      evo.commitIdAfter = x.commitIdAfter;
+      evo.commitIdBefore = evo.commitIdBefore || x.commitIdBefore;
+      evo.commitIdAfter = evo.commitIdAfter || x.commitIdAfter;
       for (const element of evo.before) {
-        if (
-          element.file ===
-          "core/src/main/java/com/graphhopper/storage/GraphBuilder.java"
-        ) {
-          if (element.start === 3563 && element.end === 3575) {
-            console.log(element);
-          }
-        }
         const key = element.file + ":" + element.start + "-" + element.end;
-        let rrr = rangesMap[key];
-        if (rrr === undefined) {
-          rrr = {
+        element.commitId = element.commitId || x.commitIdBefore;
+        let rangeInMap = rangesMapBefore[key];
+        if (!rangeInMap) {
+          rangeInMap = {
             value: element,
-            // file: element.file,
-            // start: element.start,
-            // end: element.end,
-            id: nodes.length,
+            id: NodesCount,
             causes2: [],
             effects2: [],
           };
-          rangesMap[key] = rrr;
-          // nodes.push(rrr)
-          // data.byId[rrr.id] = rrr
+          data.byId[NodesCount] = rangeInMap;
+          NodesCount++;
+          rangesMapBefore[key] = rangeInMap;
         }
         evo.commitIdBefore =
-          rrr.value.commitId || evo.commitIdBefore || x.commitIdBefore;
+          evo.commitIdBefore || rangeInMap.value.commitId || x.commitIdBefore;
         element.commitId =
-          rrr.value.commitId || element.commitId || evo.commitIdBefore;
+          element.commitId || rangeInMap.value.commitId || evo.commitIdBefore;
         element.file = element.file;
-        if (rrr.evolutions === undefined || !(rrr.evolutions.length >= 0)) {
-          rrr.evolutions = [];
+        if (
+          rangeInMap.evolutions === undefined ||
+          !(rangeInMap.evolutions.length >= 0)
+        ) {
+          rangeInMap.evolutions = [];
         }
-        rrr.evolutions = [...rrr.evolutions, evo];
-        rrr.isRoot = true;
+        rangeInMap.evolutions = [...rangeInMap.evolutions, evo];
+        rangeInMap.isRoot = true;
         if (roots[key] === undefined) {
-          const tmp = rangesMap[key];
+          const tmp = rangesMapBefore[key];
           if (tmp) {
             data.roots.push(tmp.id);
             roots[key] = true;
           }
         }
       }
-      for (const element of evo.before) {
-        element.commitId = element.commitId || x.commitIdAfter;
-        element.file = element.file;
-      }
+      // for (const element of evo.after) {
+      //   const key = element.file + ":" + element.start + "-" + element.end;
+      //   element.commitId = element.commitId || x.commitIdAfter;
+      //   let rangeInMap = rangesMapAfter[key];
+      //   if (!rangeInMap) {
+      //     rangeInMap = {
+      //       value: element,
+      //       id: nodes.length,
+      //       causes2: [],
+      //       effects2: [],
+      //     };
+      //     rangesMapAfter[key] = rangeInMap;
+      //   }
+      //   evo.commitIdAfter =
+      //     rangeInMap.value.commitId || evo.commitIdAfter || x.commitIdAfter;
+      //   element.commitId =
+      //     rangeInMap.value.commitId || element.commitId || evo.commitIdAfter;
+      //   element.file = element.file;
+      //   if (rangeInMap.evolutions === undefined || !(rangeInMap.evolutions.length >= 0)) {
+      //     rangeInMap.evolutions = [];
+      //   }
+      //   rangeInMap.evolutions = [...rangeInMap.evolutions, evo];
+      //   rangeInMap.isRoot = true;
+      //   if (roots[key] === undefined) {
+      //     const tmp = rangesMapBefore[key];
+      //     if (tmp) {
+      //       data.roots.push(tmp.id);
+      //       roots[key] = true;
+      //     }
+      //   }
+      // }
     }
   }
-
   data.nodes = Object.values(data.byId);
+
+  const files = {} as {
+    [k: string]: { value: File; id: number; isTestFile?: boolean };
+  };
+  data.nodes.forEach(({ value: x, id }) => {
+    debugger;
+    const key = x.repository + "/" + x.commitId + "/" + x.file;
+    let file = files[key];
+    let fileId: number;
+    if (file) {
+      fileId = file.id;
+      if (file.isTestFile && file.isTestFile !== x["isInTestCu"]) {
+        console.error("wrong file isTest value");
+      }
+    } else {
+      file = {
+        value: {
+          repository: x.repository,
+          commitId: x.commitId,
+          file: x.file,
+        },
+        id: NodesCount,
+        isTestFile: x["isInTestCu"],
+      };
+      files[key] = file;
+      fileId = NodesCount;
+      data.files.push(file);
+      NodesCount++;
+    }
+
+    data.fileLinks.push({
+      target: fileId,
+      source: id,
+    });
+  });
   return data;
 }
 
@@ -367,6 +334,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
   }
 
   drawGraphChart(data: ReturnType<typeof preprocess>, max_depth = undefined) {
+    const FIX_AFTER_DRAG = true;
     console.log(data, JSON.stringify(data));
     const _this = this;
     const _graph = data;
@@ -395,19 +363,20 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
         .range([20, height / 5 - 20]);
 
       const color = d3.scaleOrdinal(d3.schemeCategory10);
-
+      const allNodes = [...graph.nodes, ...graph.files];
+      const allLinks = [...graph.links, ...graph.fileLinks];
       const NODE_SIZE = 50;
-
+      type SymNode = Unstack<typeof graph.nodes> | Unstack<typeof graph.files>;
       const zetgzerfg = {};
       graph.roots.forEach((x, i) => (zetgzerfg[x] = i));
       const graphLayout = d3
-        .forceSimulation(graph.nodes)
+        .forceSimulation(allNodes)
         .force(
           "charge",
           d3
-            .forceManyBody<Unstack<typeof graph.nodes>>()
+            .forceManyBody<SymNode>()
             .distanceMin(3000)
-            .strength((d) => 5000)//(isTest(d) ? (d.value.isTest ? 60 : 60) : 1000))
+            .strength((d) => 5000) //(isTest(d) ? (d.value.isTest ? 60 : 60) : 1000))
         )
         // .force("y", d3.forceY(d => {
         //   if (isTest(d)) {
@@ -421,7 +390,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
         .force(
           "collide",
           d3
-            .forceCollide<Unstack<typeof graph.nodes>>()
+            .forceCollide<SymNode>()
             .radius(NODE_SIZE * 10)
             .strength(0.99)
             .iterations(40)
@@ -433,7 +402,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
         .force(
           "link",
           d3
-            .forceLink<Unstack<typeof graph.nodes>, any>(graph.links)
+            .forceLink<SymNode, any>(allLinks)
             .id((d) => {
               return "" + d.id;
             })
@@ -449,7 +418,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             })
             .strength(0.5)
         )
-        .force("centering", d3.forceCenter(0,0));//width / 2, height / 2));
+        .force("centering", d3.forceCenter(0, 0)); //width / 2, height / 2));
 
       const adjlist = [];
 
@@ -461,13 +430,6 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
       });
 
       setTimeout(function() {
-        graphLayout;
-        graphLayout.restart();
-      }, 1000);
-      setTimeout(function() {
-        // graph.roots.forEach(element => {
-        //   graphLayout.force("g" + element, null)
-        // });
         graphLayout
           // .force("charge", d3.forceManyBody().distanceMin(1000)
           //   .strength(d => 5000))
@@ -488,7 +450,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           .force(
             "collide",
             d3
-              .forceCollide<Unstack<typeof graph.nodes>>()
+              .forceCollide<SymNode>()
               .radius((d) => {
                 if (
                   d.evolutions === undefined ||
@@ -504,7 +466,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           .force(
             "link",
             d3
-              .forceLink<Unstack<typeof graph.nodes>, any>(graph.links)
+              .forceLink<SymNode, any>(allLinks)
               .id((d) => {
                 return "" + d.id;
               })
@@ -514,18 +476,18 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
                   d.evolutions.length === undefined ||
                   d.evolutions.length === 0
                 ) {
-                  return NODE_SIZE * 1.5;
+                  return NODE_SIZE * 1.2;
                 }
-                return NODE_SIZE * 2;
+                return NODE_SIZE * 1.7;
               })
-              .strength(0.7)
+              .strength((d) => ("start" in d.target.value ? 0.95 : 0.2))
           )
           .force("centering", d3.forceCenter(width / 2, height / 2));
-        // .force("collision", d3.forceCollide(1)
-        //   .radius(d => (isTest(d) ? (d.isTest ? 10 : 10) : d.isRoot ? 20 :10) * NODE_SIZE)
-        //   .strength(d => isTest(d) ? (d.isTest ? 1 : 1) : .5)
-        // )
         graphLayout.restart();
+        svg.call(
+          zoom.transform,
+          d3.zoomIdentity.translate(-1850, 0).scale(0.1)
+        );
       }, 1000);
 
       graphLayout.on("tick", ticked).alpha(3);
@@ -544,28 +506,84 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
 
       const zoom = d3
         .zoom()
-        .scaleExtent([0.1, 4])
+        .scaleExtent([0.01, 4])
         .on("zoom", function(a, b, c) {
-          // console.log(a, d3.event.transform);
           container.attr("transform", d3.event.transform);
         });
       svg.call(zoom);
+      // svg.call(zoom.transform, d3.zoomIdentity.translate(-width,0));
+      svg.call(zoom.transform, d3.zoomIdentity.scale(0.01));
+      // svg.call(zoom.transform, d3.zoomIdentity.translate(-width,0));
 
       svg
         .transition()
         .duration(750)
         .call(zoom.transform, d3.zoomIdentity.scale(0.2));
 
-      var filter = svg
-        .append("defs")
+      let defs = svg.append("defs");
+
+      let filter = defs
         .append("filter")
         .attr("x", "-.03")
         .attr("y", "-.1")
         .attr("width", "1.06")
         .attr("height", "1.2")
-        .attr("id", "background"); //id of the filter
+        .attr("id", "background"); // id of the filter
       filter.append("feFlood").attr("flood-color", "black");
       filter.append("feComposite").attr("in", "SourceGraphic");
+
+      const FILE_COLOR = (x: Unstack<typeof graph.files>) =>
+        x.isTestFile === undefined
+          ? "lightgray"
+          : x.isTestFile
+          ? "wheat"
+          : "powderblue";
+
+      const fileLinks = container
+        .append("g")
+        .attr("class", "links")
+        .selectAll("line")
+        .data(graph.fileLinks)
+        .enter()
+        .append("line")
+        .attr("stroke", (d) => FILE_COLOR(d.target))
+        .attr("stroke-width", "40px");
+
+      const files = container
+        .append("g")
+        .attr("class", "nodes")
+        .selectAll("g")
+        .data(graph.files)
+        .enter()
+        .append("g")
+        .style("transform-origin", "center");
+      files
+        .append("circle")
+        .attr("r", NODE_SIZE)
+        .attr("fill", FILE_COLOR)
+        .append("svg:title")
+        .text((d) => d.value.file);
+
+      function extractAstPath(x) {
+        // const tmp = /#([^[]+)\[([^\]]+)\]/.exec(x)
+        // if (!tmp) {
+        //   return [x]
+        // }
+        // const match = tmp[0]
+        // if (!match) {
+        //   return [x]
+        // }
+        // const rec = extractAstPath(x.substr(match.length-1))
+        // return [[tmp[1],tmp[2]],...rec]
+        x.split("#")
+          .slice(1)
+          .map((x) => {
+            const tmp = /([^[#]+)\[([^=]+)=([^\]]+)\]/.exec(x);
+            return tmp
+              ? { type: tmp[1], props: { ["" + tmp[2]]: tmp[3] } }
+              : { type: x };
+          });
+      }
 
       const links = container
         .append("g")
@@ -590,7 +608,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
         .attr("stroke-width", "5px");
 
       links.call(myaddtitle);
-      function myaddtitle(node) {
+      function myaddtitle(node: typeof links) {
         node.append("svg:title").text(function(d, i) {
           return d.content && d.content.type;
         });
@@ -605,7 +623,6 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
         .style("transform-origin", "center");
 
       nodes.call(addContent);
-
       function addContent(node: typeof nodes) {
         const evo_nodes = node.filter((d) => {
           if (
@@ -649,14 +666,18 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           .attr("text-anchor", "middle")
           .append("svg:title")
           .text(function(d) {
-            return (
-              "" +
-              (d.evolutions?.map((x) => x.type) || "") +
-              "\n" +
-              (d.value && d.value.start) +
-              "," +
-              (d.value && d.value.end)
-            );
+            if ("start" in d.value) {
+              return (
+                "" +
+                (d.evolutions?.map((x) => x.type) || "") +
+                "\n" +
+                (d.value && d.value.start) +
+                "," +
+                (d.value && d.value.end)
+              );
+            } else {
+              return "";
+            }
           });
         const other_nodes = node.filter((d) => {
           if (
@@ -673,8 +694,14 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           // .attr("x", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
           // .attr("y", function (d) { return -NODE_SIZE * (d.scale || 1) / 2; })
           .attr("r", function(d) {
-            return d["missing"] ? 0 : NODE_SIZE / 2;
-          });
+            if (d.value.type === "Method") {
+              return NODE_SIZE;
+            } else if (d.value.type === "Constructor") {
+              return NODE_SIZE/1.5;
+            }
+            return NODE_SIZE / 2;
+          })
+          .attr("fill", "black");
         evo_nodes
           .append("text")
           .style("transform-origin", "center")
@@ -693,10 +720,13 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             if (typeof value["name"] === "string") {
               return value["name"];
             }
-            if (typeof value.sig === "string") {
-              return value.sig;
+            if ("start" in value) {
+              if (typeof value.sig === "string") {
+                return value.sig;
+              }
+              return "" + value.start + "," + value.end;
             }
-            return "" + value.start + "," + value.end;
+            return "a";
           })
           .append("svg:title")
           .text(function(d, i) {
@@ -710,25 +740,31 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             if (typeof value["signature"] === "string") {
               return value["declType"] + "." + value["signature"];
             }
-            if (typeof value.sig === "string") {
-              return value.sig + "\n" + value.start + "," + value.end;
+            if ("start" in value) {
+              if (typeof value.sig === "string") {
+                return value.sig + "\n" + value.start + "," + value.end;
+              }
+              if (value.sig) {
+                return (
+                  value.sig["declType"] +
+                  "." +
+                  value.sig["signature"] +
+                  "\n" +
+                  value.type
+                );
+              }
+              return "" + value.start + "," + value.end + "\n" + value.type;
             }
-            if (value.sig) {
-              return (
-                value.sig["declType"] +
-                "." +
-                value.sig["signature"] +
-                "\n" +
-                value.type
-              );
-            }
-            return "" + value.start + "," + value.end + "\n" + value.type;
+            return "b";
           });
 
         other_nodes
           .append("text")
           .style("transform-origin", "center")
           .attr("fill", (d) => {
+            if (!("start" in d.value)) {
+              return "gray";
+            }
             if (d["isTest"]) {
               return "red";
             } else if (isTest(d)) {
@@ -757,14 +793,19 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             if (typeof value["name"] === "string") {
               return value["name"];
             }
-            if (typeof value.sig === "string") {
-              return value.sig;
+            if ("start" in value) {
+              if (typeof value.sig === "string") {
+                return value.sig;
+              }
+              return "" + value.start + "," + value.end;
             }
-            return "" + value.start + "," + value.end;
+            return "";
           })
           .attr("dominant-baseline", "middle")
           .attr("text-anchor", "middle")
-          .attr("filter", "url(#background)")
+          .attr("filter", (d) =>
+            "start" in d.value ? "url(#background)" : null
+          )
           .append("svg:title")
           .text(function(d, i) {
             if (typeof d["signature"] === "string") {
@@ -777,13 +818,16 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             if (typeof value["signature"] === "string") {
               return value["declType"] + "." + value["signature"];
             }
-            if (typeof value.sig === "string") {
-              return value.sig + "\n" + value.start + "," + value.end;
+            if ("start" in value) {
+              if (typeof value.sig === "string") {
+                return value.sig + "\n" + value.start + "," + value.end;
+              }
+              if (value.sig !== undefined) {
+                return value.sig["declType"] + "." + value.sig["signature"];
+              }
+              return "" + value.start + "," + value.end + "\n" + value.type;
             }
-            if (value.sig !== undefined) {
-              return value.sig["declType"] + "." + value.sig["signature"];
-            }
-            return "" + value.start + "," + value.end + "\n" + value.type;
+            return "";
           });
       }
 
@@ -816,23 +860,26 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
       );
 
       nodes.on("dblclick", dblclick);
-
       nodes.on("mouseover.highlight", (d) => {
         // PubSub.publish('HIGHLIGHT_DIFF', { node: {side:'left'}, range: [d.value.start, d.value.end] });
-        PubSub.publish("HIGHLIGHT", {
-          node: { ...d.value, side: "left" },
-          range: [d.value.start, d.value.end],
-        });
+        if ("start" in d.value) {
+          PubSub.publish("HIGHLIGHT", {
+            node: { ...d.value, side: "left" },
+            range: [d.value.start, d.value.end],
+          });
+        }
       });
       nodes.on("mouseleave.highlight", (d) => {
         // PubSub.publish('CLEAR_HIGHLIGHT_DIFF', { node: {side:'left'}, range: [d.value.start, d.value.end] });
-        PubSub.publish("CLEAR_HIGHLIGHT", {
-          node: { ...d.value,  side: "left" },
-          range: [d.value.start, d.value.end],
-        });
+        if ("start" in d.value) {
+          PubSub.publish("CLEAR_HIGHLIGHT", {
+            node: { ...d.value, side: "left" },
+            range: [d.value.start, d.value.end],
+          });
+        }
       });
 
-      function findRoot(node: Node<Range & { description?: string }>) {
+      function findRoot(node: Unstack<typeof graph.nodes>) {
         // TODO do not rely on d3 to move in the graph
         if (!node) {
           return [];
@@ -845,7 +892,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             continue;
           } else if (curr.isRoot) {
             r.push(curr);
-          } else if (curr.value && curr.value.description === "given") {
+          } else if (curr.value && curr.value["description"] === "given") {
             curr.value.commitId = curr.effects2[0].target.value.commitId;
             r.push(curr);
           } else {
@@ -854,12 +901,8 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
         }
         return r;
       }
-      type Dep<T> = {
-        source: T;
-        target: T;
-      };
 
-      function serializeRange(r: Unstack<typeof graph.nodes>["value"]) {
+      function serializeRange(r: Range) {
         return `${r.repository}/commit/${r.commitId}/${r.file}:${r.start}:${r.end}`;
       }
       const Max_ImpactR = 5;
@@ -867,7 +910,16 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
 
       function dblclick(d: Unstack<typeof graph.nodes>) {
         const isEvolved = d.evolutions && d.evolutions.length > 0;
-        debugger;
+        if (!("start" in d.value)) {
+          return;
+        }
+        const a = d.value;
+        _this.props.onSelection({
+          impactedRanges: {},
+          selectedEvolutionIds: [],
+          cursor: d.value,
+        });
+
         const alreadySelectedEvoIds = _this.props.getSelectedEvolutionsIds();
         const alreadySelectedImpactedR = _this.props.getSelectedImpactedRanges();
         const impactedRanges: { [k: string]: Range } = {},
@@ -884,14 +936,14 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           if (key in visited) {
             return;
           }
-          visited[key] = d.value
+          visited[key] = d.value;
           if (isTest(d) && iCount < Max_ImpactR) {
             impactedRanges[key] = d.value;
           }
           d.evolutions?.forEach(
             (x) => eCount < Max_Evolutions && selectedEvolutionIds.add(x.id)
           );
-          d.effects2.forEach((x: Dep<typeof d>) => {
+          d.effects2.forEach((x) => {
             searchEffects(x.target);
           });
         }
@@ -901,9 +953,11 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           if (key in visited) {
             return;
           }
-          visited[key] = d.value
-          d.evolutions?.forEach((x) => eCount < Max_Evolutions && selectedEvolutionIds.add(x.id));
-          d.causes2.forEach((x: Dep<typeof d>) => {
+          visited[key] = d.value;
+          d.evolutions?.forEach(
+            (x) => eCount < Max_Evolutions && selectedEvolutionIds.add(x.id)
+          );
+          d.causes2.forEach((x) => {
             searchCauses(x.source);
           });
         }
@@ -914,32 +968,32 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             searchEffects(d);
           } else if (d.evolutions?.some((x) => alreadySelectedEvoIds[x.id])) {
             searchEffects(d);
-            visited = {}
+            visited = {};
             searchCauses(d);
           } else {
             // just highlight range
           }
         } else if (isEvolved && isTest(d)) {
-            searchCauses(d);
+          searchCauses(d);
         } else if (isEvolved) {
-            searchEffects(d);
-            visited = {}
-            searchCauses(d);
+          searchEffects(d);
+          visited = {};
+          searchCauses(d);
         } else if (isTest(d)) {
           // only one impacted test here but multiple ranges possibly shown
-            searchEffects(d);
-            visited = {}
-            searchCauses(d);
+          searchEffects(d);
+          visited = {};
+          searchCauses(d);
         } else {
-            searchEffects(d);
-            visited = {}
-            searchCauses(d);
+          searchEffects(d);
+          visited = {};
+          searchCauses(d);
         }
 
         _this.props.onSelection({
           impactedRanges,
-          selectedEvolutionIds,
-          cursor: d.value,
+          selectedEvolutionIds: Array.from(selectedEvolutionIds),
+          cursor: a,
         });
 
         // // TODO make it available to rest of app
@@ -962,7 +1016,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
       }
 
       function ticked() {
-        container.select(".nodes").selectAll("g") &&
+        container.selectAll(".nodes").selectAll("g") &&
           container
             .selectAll(".nodes")
             .selectAll("g")
@@ -1046,11 +1100,13 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
         d.fx = d3.event.x;
         d.fy = d3.event.y;
       }
-
       function dragended(d) {
         if (!d3.event.active) graphLayout.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
+        if (FIX_AFTER_DRAG) {
+          d.fx = d3.event.x;
+          d.fy = d3.event.y;
+        } else {
+        }
       }
       const screenShotHandler = () => {
         if (!_this.canvasRef.current) {

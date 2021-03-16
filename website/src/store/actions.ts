@@ -356,7 +356,7 @@ const map = {
       set: (status: Status) => status,
       Selected: {
         toggle: (id: number) => id,
-        enable: (...ids: number[]) => ids,
+        enable: (...ids: number[]) => ids[0]===undefined?[]:ids,
         reset: () => undefined,
       },
     },

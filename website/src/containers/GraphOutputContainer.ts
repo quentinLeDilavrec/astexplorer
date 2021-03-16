@@ -58,7 +58,7 @@ function mapDispatchToProps(
   return {
     onSelection: (x: {
       impactedRanges: { [k: string]: Range };
-      selectedEvolutionIds: Set<number>;
+      selectedEvolutionIds: number[];
       cursor: Range;
     }) =>
       dispatch(
@@ -66,9 +66,11 @@ function mapDispatchToProps(
           actions["Evolutions/Status/Selected/reset"](),
           actions["Impacts/Status/Selected/reset"](),
           actions["Cursor/set"](x.cursor),
-          actions["Evolutions/Status/Selected/enable"](
-            ...Array.from(x.selectedEvolutionIds)
-          ),
+          x.selectedEvolutionIds.length === 0
+            ? actions["Evolutions/Status/Selected/enable"]()
+            : actions["Evolutions/Status/Selected/enable"](
+                ...x.selectedEvolutionIds
+              ),
           actions["Impacts/Status/Selected/add"](x.impactedRanges),
         ])
       ),

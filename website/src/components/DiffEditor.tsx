@@ -144,32 +144,10 @@ export default class DiffEditor extends React.Component<P, S> {
       noScroll: false,
     }
   ) {
-    type rTM = CodeMirror.TextMarker & {className: string;
+    type rTM = CodeMirror.TextMarker & {
+      className: string;
       markers: (CodeMirror.TextMarker & { className: string })[];
     };
-    const { defaultMarking, kind } = options;
-    let first = Infinity;
-    const elements: rTM[] = [];
-    for (let i = 0; i < ranges.length; i++) {
-      const range = ranges[i];
-      if (!range) {
-        continue;
-      }
-      const start = range.start;
-      const end = range.end;
-      first = Math.min(first, start);
-      const from = editor.posFromIndex(start);
-      const to = editor.posFromIndex(end + 1);
-      const m = editor.markText(from, to, {
-        className: range.marking || defaultMarking,
-        title:
-          // range.description ||
-          range.type ? range.type : "TODO get node description",
-        shared: true,
-      });
-      // m.on // TODO test also this
-      elements.push(m as rTM);
-    }
     const thumbs = {
       good: "thumbs-up",
       bad: "thumbs-down",
@@ -179,61 +157,68 @@ export default class DiffEditor extends React.Component<P, S> {
       bad: "marked-bad",
     } as const;
     const buttons: { [b: string]: HTMLButtonElement } = {};
-    let clicked_state;
+    let clicked_state: keyof typeof thumbs | undefined;
+    const { defaultMarking, kind } = options;
+    let first = Infinity;
+    const weighted: rTM[] = [];
+    const boxed: { mark?: rTM; range?: { start: number; end: number } }[] = [];
+    let sortedStarts = [] as number[];
+    for (let i = 0; i < ranges.length; i++) {
+      const range = ranges[i];
+      if (!range) {
+        continue;
+      }
+      const start = range.start;
+      sortedStarts.push(start);
+      const end = range.end;
+      first = Math.min(first, start);
+      const from = editor.posFromIndex(start);
+      const to = editor.posFromIndex(end + 1);
+      const m = editor.markText(from, to, {
+        className: "marked-current",
+        // title:
+        // range.description ||
+        // range["description"] || range.type,
+        // shared: true,
+      });
+      // m.on // TODO test also this
+      weighted.push(m as rTM);
+      boxed.push({ range: range });
+    }
+    sortedStarts.sort((a, b) => a - b);
+    const onEnter = (choice: keyof typeof marked) => () => {
+      boxed.forEach((x, i) => {
+        const range = x.range;
+        if (!range) {
+          return;
+        }
+        const { start, end } = range;
+        x.mark?.clear();
+        x.mark = editor.markText(
+          editor.posFromIndex(start),
+          editor.posFromIndex(end + 1),
+          {
+            className: cx(marked[clicked_state || choice]),
+            shared: true,
+            // handleMouseEvents: true, // NEXT checkit
+          }
+        ) as rTM;
+      });
+      clearTimeout(hideThumbs)
+      };
+    let hideThumbs:NodeJS.Timeout;
+    let thumbsWidget:CodeMirror.LineWidget
     const onLeave = () => {
-      elements.forEach((x, i) => {
-        const { from, to } = x.find();
-        const classNames = {};
-        const markers = (x as any).markers as any[];
-        if (Array.isArray(markers)) {
-          markers.forEach((x) =>
-            x.className
-              ?.split(" ")
-              .forEach((x) => (classNames[x] = classNames[x] || true))
-          );
-        } else {
-          (x as any).className
-            ?.split(" ")
-            .forEach((x) => (classNames[x] = true));
+      boxed.forEach((x, i) => {
+        if (!clicked_state) {
+          x.mark?.clear();
+          x.mark = undefined;
         }
-        Object.entries(marked).forEach(
-          ([k, v]) => (classNames[v] = k === clicked_state)
-        );
-        x.clear();
-        elements[i] = editor.markText(from, to, {
-          className: cx(classNames),
-          shared: true,
-        }) as rTM;
       });
-    };
-
-    const onEnter = (choice) => () => {
-      elements.forEach((x, i) => {
-        const { from, to } = x.find();
-        const classNames = {};
-        debugger;
-        if (Array.isArray(x.markers)) {
-          x.markers.forEach(
-            (x) =>
-              x.className &&
-              x.className
-                .split(" ")
-                .forEach((x) => (classNames[x] = classNames[x] || true))
-          );
-        } else {
-          x.className &&
-            x.className.split(" ").forEach((x) => (classNames[x] = true));
-        }
-        Object.entries(marked).forEach(
-          ([k, v]) => (classNames[v] = clicked_state !== choice && k === choice)
-        );
-        x.clear();
-        elements[i] = editor.markText(from, to, {
-          className: cx(classNames),
-          shared: true,
-          // handleMouseEvents: true, // NEXT checkit
-        }) as rTM;
-      });
+      hideThumbs = setTimeout(() => {
+        thumbsWidget.clear();
+        buttons_visible = false;
+      }, 5000);
     };
     const onClick = (choice) => () => {
       for (const key in buttons) {
@@ -249,82 +234,97 @@ export default class DiffEditor extends React.Component<P, S> {
           }
         }
       }
-      // TODO MultiEditor should forward some data OR a callback to handle this
-      console.log(thumbs[choice], {
-        ranges: elements.map((x, i) => {
-          const { from, to } = x.find();
-          const classNames = {};
-          if (Array.isArray(x.markers)) {
-            x.markers.forEach(
-              (x) =>
-                x.className &&
-                x.className
-                  .split(" ")
-                  .forEach((x) => (classNames[x] = classNames[x] || true)) // it merge mark between instances
-            );
-          } else {
-            x.className &&
-              x.className.split(" ").forEach((x) => (classNames[x] = true));
-          }
-          Object.entries(marked).forEach(
-            ([k, v]) =>
-              (classNames[v] = clicked_state !== choice && k === choice)
-          );
-          debugger;
-          x.clear();
-          elements[i] = editor.markText(from, to, {
-            className: cx(classNames),
-            shared: true,
-          }) as rTM;
-          return {
-            start: editor.indexFromPos(from),
-            end: editor.indexFromPos(to),
-          };
-        }),
-      });
-
       clicked_state = clicked_state === choice ? undefined : choice;
-      // TODO fix scrolling to elsewhere
-      // const tmp = editor.getViewportz()
-      editor.setCursor(editor.getCursor("anchor"), undefined, {
-        scroll: false,
+      boxed.forEach((x, i) => {
+        const range = x.range;
+        if (!range || !clicked_state) {
+          return;
+        }
+        const { start, end } = range;
+        x.mark?.clear();
+        x.mark = editor.markText(
+          editor.posFromIndex(start),
+          editor.posFromIndex(end + 1),
+          {
+            className: cx(marked[clicked_state]),
+            shared: true,
+            // handleMouseEvents: true, // NEXT checkit
+          }
+        ) as rTM;
       });
-      // editor.scrollIntoView(tmp);
     };
-    const e = document.createElement("div");
-    ReactDOM.render(
-      <div>
-        <button
-          className="fa fa-thumbs-down evo-button"
-          style={{ color: "red" }}
-          onClick={onClick("bad")}
-          onMouseEnter={onEnter("bad")}
-          onMouseLeave={onLeave}
-          ref={(x) => (x ? (buttons.bad = x) : undefined)}
-        ></button>
-        <button
-          className="fa fa-thumbs-up evo-button"
-          style={{ color: "green" }}
-          onClick={onClick("good")}
-          onMouseEnter={onEnter("good")}
-          onMouseLeave={onLeave}
-          ref={(x) => (x ? (buttons.good = x) : undefined)}
-        ></button>
-      </div>,
-      e
-    );
-    // e.style.backgroundColor = "purple"
-    e.style.zIndex = "" + 100;
-    const tmp = editor.posFromIndex(first);
-    // editor.addWidget(editor.posFromIndex(first),
-    //   e, true)
-    editor.addLineWidget(tmp.line, e, {
-      above: true,
-      showIfHidden: true,
-      noHScroll: true,
-    });
+    let buttons_visible = false;
+    const showThumbsButtons = () => {
+      buttons_visible = true;
+      const e = document.createElement("div");
+      const basic = ["fa evo-button"]
+      ReactDOM.render(
+        <div>
+          <button
+            className={cx(...basic,"fa-thumbs-down",...(clicked_state==='bad'?['clicked']:[]))}
+            style={{ color: "red" }}
+            onClick={onClick("bad")}
+            onMouseOver={onEnter("bad")}
+            onMouseOut={onLeave}
+            ref={(x) => (x ? (buttons.bad = x) : undefined)}
+          ></button>
+          <button
+            className={cx(...basic,"fa-thumbs-up",...(clicked_state==='good'?['clicked']:[]))}
+            style={{ color: "green" }}
+            onClick={onClick("good")}
+            onMouseOver={onEnter("good")}
+            onMouseOut={onLeave}
+            ref={(x) => (x ? (buttons.good = x) : undefined)}
+          ></button>
+        </div>,
+        e
+      );
+      // e.style.backgroundColor = "purple"
+      e.style.zIndex = "" + 100;
+      // editor.addWidget(editor.posFromIndex(first),
+      //   e, true)
+      thumbsWidget = editor.addLineWidget(posFirst.line, e, {
+        above: true,
+        showIfHidden: true,
+        noHScroll: true,
+      });
+      hideThumbs = setTimeout(() => {
+        thumbsWidget.clear();
+        buttons_visible = false;
+      }, 5000);
+    };
+    const posFirst = editor.posFromIndex(first);
+    editor.getWrapperElement().onmousemove = function(e) {
+      if (!buttons_visible) {
+        const lineCh = editor.coordsChar({ left: e.clientX, top: e.clientY });
+        const markers = editor.findMarksAt(lineCh);
+        const mark = markers.filter(
+          (x) => (x as any).className === "marked-current"
+        )[0];
+        if (mark) {
+          showThumbsButtons();
+        }
+      }
+    };
+    const scrollFiller = editor
+      .getWrapperElement()
+      .querySelector<HTMLDivElement>("div.CodeMirror-scrollbar-filler");
+    if (scrollFiller) {
+      let rangeIndexShown = 0;
+      scrollFiller.style.backgroundColor = "cyan";
+      scrollFiller.addEventListener("click", () => {
+        rangeIndexShown = (rangeIndexShown + 1) % ranges.length;
+        const toShow = ranges[rangeIndexShown];
+        if (toShow) {
+          this.scrollTo(
+            editor,
+            editor.posFromIndex(sortedStarts[rangeIndexShown] || first)
+          );
+        }
+      });
+    }
     if (!options.noScroll) {
-      this.scrollTo(editor, editor.posFromIndex(first));
+      this.scrollTo(editor, posFirst);
     }
     if (kind === "good") {
       onClick("good")();
@@ -376,33 +376,33 @@ export default class DiffEditor extends React.Component<P, S> {
     }
 
     const aaa = () => {
-      const bd = before.doc,
-        ad = after.doc;
-      if (typeof bd === "string" || typeof ad === "string") {
-        throw null;
-      }
-      const r = {
-        before: this.codeMirror.leftOriginal().swapDoc(bd),
-        after: this.codeMirror.editor().swapDoc(ad),
-      };
-      if ("start" in before && "start" in after) {
-        this.codeMirror; // TODO unsync diff viewer
-      }
-      if ("start" in before) {
-        this.markIt(
-          this.codeMirror.leftOriginal(),
-          // before["ranges"] ||
-          [before]
-        );
-      }
-      if ("start" in after) {
-        this.markIt(
-          this.codeMirror.editor(),
-          // after["ranges"] ||
-          [after]
-        );
-      }
-      return r;
+      // const bd = before.doc,
+      //   ad = after.doc;
+      // if (typeof bd === "string" || typeof ad === "string") {
+      //   throw null;
+      // }
+      // const r = {
+      //   before: this.codeMirror.leftOriginal().swapDoc(bd),
+      //   after: this.codeMirror.editor().swapDoc(ad),
+      // };
+      // if ("start" in before && "start" in after) {
+      //   this.codeMirror; // TODO unsync diff viewer
+      // }
+      // if ("start" in before) {
+      //   this.markIt(
+      //     this.codeMirror.leftOriginal(),
+      //     // before["ranges"] ||
+      //     [before]
+      //   );
+      // }
+      // if ("start" in after) {
+      //   this.markIt(
+      //     this.codeMirror.editor(),
+      //     // after["ranges"] ||
+      //     [after]
+      //   );
+      // }
+      // return r;
     };
 
     this.setState(
@@ -430,6 +430,150 @@ export default class DiffEditor extends React.Component<P, S> {
     ) {
       console.error(this.codeMirror, this.container_both_bugged);
     }
+    const b = this.state.left,
+      a = this.state.right;
+    if (typeof b !== "object" || typeof a !== "object") {
+      throw null;
+    }
+    const bd = a.doc,
+      ad = b.doc;
+    if (typeof bd !== "object" || typeof ad !== "object") {
+      throw null;
+    }
+    const r = {
+      before:
+        this.codeMirror.editor().getDoc() === bd
+          ? bd
+          : this.codeMirror.editor().swapDoc(bd),
+      after:
+        this.codeMirror.leftOriginal().getDoc() === ad
+          ? ad
+          : this.codeMirror.leftOriginal().swapDoc(ad),
+    };
+
+    function collapseSingle(cm: CodeMirror.Editor, from:number, to:number) {
+      cm.addLineClass(from, "wrap", "CodeMirror-merge-collapsed-line");
+      let widget = document.createElement("span");
+      widget.className = "CodeMirror-merge-collapsed-widget";
+      widget.title = (cm as any).phrase("Identical text collapsed. Click to expand.");
+      let mark = cm.markText(CodeMirror.Pos(from, 0), CodeMirror.Pos(to - 1), {
+        inclusiveLeft: true,
+        inclusiveRight: true,
+        replacedWith: widget,
+        clearOnEnter: true,
+      });
+      function clear() {
+        mark.clear();
+        cm.removeLineClass(from, "wrap", "CodeMirror-merge-collapsed-line");
+      }
+      if (mark["explicitlyCleared"]) clear();
+      CodeMirror.on(widget, "click", clear);
+      mark.on("clear", clear);
+      CodeMirror.on(widget, "click", clear);
+      return { mark: mark, clear: clear };
+    }
+
+    function collapseStretch(
+      size:number,
+      editors: {
+        line: number;
+        cm: CodeMirror.Editor;
+      }[]
+    ) {
+      let marks: (ReturnType<typeof collapseSingle>)[] = [];
+      function clear() {
+        for (let i = 0; i < marks.length; i++) marks[i]?.clear();
+      }
+      for (let i = 0; i < editors.length; i++) {
+        const editor = editors[i];
+        if (!editor) {
+          continue
+        }
+        const mark = collapseSingle(editor.cm, editor.line, editor.line + size);
+        marks.push(mark);
+        mark.mark.on("clear", clear);
+      }
+      return marks[0]?.mark;
+    }
+
+    function unclearNearChunks(dv, margin, off, clear) {
+      for (var i = 0; i < dv.chunks.length; i++) {
+        var chunk = dv.chunks[i];
+        for (var l = chunk.editFrom - margin; l < chunk.editTo + margin; l++) {
+          var pos = l + off;
+          if (pos >= 0 && pos < clear.length) clear[pos] = false;
+        }
+      }
+    }
+
+    function getMatchingOrigLine(editLine, chunks) {
+      var editStart = 0,
+        origStart = 0;
+      for (var i = 0; i < chunks.length; i++) {
+        var chunk = chunks[i];
+        if (chunk.editTo > editLine && chunk.editFrom <= editLine) return null;
+        if (chunk.editFrom > editLine) break;
+        editStart = chunk.editTo;
+        origStart = chunk.origTo;
+      }
+      return origStart + (editLine - editStart);
+    }
+
+    function collapseIdenticalStretches(
+      mv: CodeMirror.MergeView.MergeViewEditor,
+      margin?:number
+    ) {
+      if (typeof margin != "number") margin = 2;
+      let clear: any[] = [],
+        edit = mv.editor(),
+        off = edit.firstLine();
+      for (let l = off, e = edit.lastLine(); l <= e; l++) clear.push(true);
+      if (mv.left) unclearNearChunks(mv.left, margin, off, clear);
+      if (mv.right) unclearNearChunks(mv.right, margin, off, clear);
+
+      for (let i = 0; i < clear.length; i++) {
+        if (clear[i]) {
+          let line = i + off;
+          let size = 1;
+          for (; i < clear.length - 1 && clear[i + 1]; i++, size++) {}
+          if (size > margin) {
+            let editors: { line: number; cm: CodeMirror.Editor }[] = [
+              { line: line, cm: edit },
+            ];
+            if (mv.left)
+              editors.push({
+                line: getMatchingOrigLine(line, (mv.left as any).chunks),
+                cm: mv.leftOriginal(),
+              } as any);
+            if (mv.right)
+              editors.push({
+                line: getMatchingOrigLine(line, (mv.right as any).chunks),
+                cm: mv.rightOriginal(),
+              } as any);
+            let mark = collapseStretch(size, editors);
+            if ((mv as any).options.onCollapse)
+              (mv as any).options.onCollapse(mv, line, size, mark);
+          }
+        }
+      }
+    }
+    collapseIdenticalStretches(this.codeMirror,undefined)
+
+    if ("start" in b) {
+      this.markIt(
+        this.codeMirror.leftOriginal(),
+        // before["ranges"] ||
+        [b]
+      );
+    }
+    if ("start" in a) {
+      this.markIt(
+        this.codeMirror.editor(),
+        // after["ranges"] ||
+        [a]
+      );
+    }
+    return r;
   }
 
   _getErrorLine(error) {
@@ -467,6 +611,13 @@ export default class DiffEditor extends React.Component<P, S> {
     if (!this.container) {
       throw null;
     }
+
+    const codeMirrorOptions = {
+      foldGutter: true,
+      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+      placeholder: "Getting content ...",
+    };
+
     // TODO unit test of MergeView outside of component
     this.codeMirror = CodeMirror.MergeView(
       // eslint-disable-line new-cap
@@ -481,10 +632,12 @@ export default class DiffEditor extends React.Component<P, S> {
         orig: undefined, //this.state.right,
         showDifferences: true,
         // connect: "align",
-        collapseIdentical: false,
+        collapseIdentical: true,
         allowEditingOriginals: true,
+        ...codeMirrorOptions,
       }
     );
+    debugger;
 
     const onClick = () => {
       const l: { start: number; end: number }[] = [];
@@ -684,99 +837,99 @@ export default class DiffEditor extends React.Component<P, S> {
       this._markerRange = null;
       this._mark = null;
       const _this = this;
-      this._subscriptions.push(
-        PubSub.subscribe(
-          "HIGHLIGHT",
-          (
-            _,
-            {
-              node,
-              range,
-            }: {
-              node: { file: string; side: "left" | "right" };
-              range: [number, number];
-            }
-          ) => {
-            if (!range) {
-              return;
-            }
-            let docRight = _this.codeMirror.editor().getDoc();
-            let docLeft = _this.codeMirror.leftOriginal().getDoc();
-            this._markerRange = range;
-            // We only want one mark at a time.
-            if (_this._mark) {
-              _this._mark.clear();
-            }
-            if (_this._mark_orig) {
-              _this._mark_orig.clear();
-            }
-            if (
-              node.side === "right" &&
-              typeof _this.state.right === "object" &&
-              _this.state.right.file === node.file
-            ) {
-              let [startRight, endRight] = [
-                docRight.posFromIndex(range[0]),
-                docRight.posFromIndex(range[1] + 1),
-              ];
-              //range.map((index) => docRight.posFromIndex(index));
-              if (!startRight || !endRight) {
-                _this._markerRange = _this._mark = null;
-                return;
-              }
-              _this._mark = _this.codeMirror
-                .editor()
-                .markText(startRight, endRight, {
-                  className: "marked",
-                  shared: true,
-                });
-            }
-            if (
-              node.side === "left" &&
-              typeof _this.state.left === "object" &&
-              _this.state.left.file === node.file
-            ) {
-              let [startLeft, endLeft] = [
-                docLeft.posFromIndex(range[0]),
-                docLeft.posFromIndex(range[1] + 1),
-              ];
-              //range.map((index) => docLeft.posFromIndex(index));
-              if (!startLeft || !endLeft) {
-                _this._markerRange = _this._mark = null;
-                return;
-              }
-              _this._mark_orig = _this.codeMirror
-                .leftOriginal()
-                .markText(startLeft, endLeft, {
-                  className: "marked",
-                  shared: true,
-                });
-            }
-          }
-        ),
+      // this._subscriptions.push(
+      //   PubSub.subscribe(
+      //     "HIGHLIGHT",
+      //     (
+      //       _,
+      //       {
+      //         node,
+      //         range,
+      //       }: {
+      //         node: { file: string; side: "left" | "right" };
+      //         range: [number, number];
+      //       }
+      //     ) => {
+      //       if (!range) {
+      //         return;
+      //       }
+      //       let docRight = _this.codeMirror.editor().getDoc();
+      //       let docLeft = _this.codeMirror.leftOriginal().getDoc();
+      //       this._markerRange = range;
+      //       // We only want one mark at a time.
+      //       if (_this._mark) {
+      //         _this._mark.clear();
+      //       }
+      //       if (_this._mark_orig) {
+      //         _this._mark_orig.clear();
+      //       }
+      //       if (
+      //         node.side === "right" &&
+      //         typeof _this.state.right === "object" &&
+      //         _this.state.right.file === node.file
+      //       ) {
+      //         let [startRight, endRight] = [
+      //           docRight.posFromIndex(range[0]),
+      //           docRight.posFromIndex(range[1] + 1),
+      //         ];
+      //         //range.map((index) => docRight.posFromIndex(index));
+      //         if (!startRight || !endRight) {
+      //           _this._markerRange = _this._mark = null;
+      //           return;
+      //         }
+      //         _this._mark = _this.codeMirror
+      //           .editor()
+      //           .markText(startRight, endRight, {
+      //             className: "marked",
+      //             shared: true,
+      //           });
+      //       }
+      //       if (
+      //         node.side === "left" &&
+      //         typeof _this.state.left === "object" &&
+      //         _this.state.left.file === node.file
+      //       ) {
+      //         let [startLeft, endLeft] = [
+      //           docLeft.posFromIndex(range[0]),
+      //           docLeft.posFromIndex(range[1] + 1),
+      //         ];
+      //         //range.map((index) => docLeft.posFromIndex(index));
+      //         if (!startLeft || !endLeft) {
+      //           _this._markerRange = _this._mark = null;
+      //           return;
+      //         }
+      //         _this._mark_orig = _this.codeMirror
+      //           .leftOriginal()
+      //           .markText(startLeft, endLeft, {
+      //             className: "marked",
+      //             shared: true,
+      //           });
+      //       }
+      //     }
+      //   ),
 
-        PubSub.subscribe(
-          "CLEAR_HIGHLIGHT",
-          (_, { range }: { range: [number, number] }) => {
-            if (
-              !range ||
-              (this._markerRange &&
-                range[0] === this._markerRange[0] &&
-                range[1] === this._markerRange[1])
-            ) {
-              this._markerRange = null;
-              if (this._mark) {
-                this._mark.clear();
-                this._mark = null;
-              }
-              if (this._mark_orig) {
-                this._mark_orig.clear();
-                this._mark_orig = null;
-              }
-            }
-          }
-        )
-      );
+      //   PubSub.subscribe(
+      //     "CLEAR_HIGHLIGHT",
+      //     (_, { range }: { range: [number, number] }) => {
+      //       if (
+      //         !range ||
+      //         (this._markerRange &&
+      //           range[0] === this._markerRange[0] &&
+      //           range[1] === this._markerRange[1])
+      //       ) {
+      //         this._markerRange = null;
+      //         if (this._mark) {
+      //           this._mark.clear();
+      //           this._mark = null;
+      //         }
+      //         if (this._mark_orig) {
+      //           this._mark_orig.clear();
+      //           this._mark_orig = null;
+      //         }
+      //       }
+      //     }
+      //   )
+      // );
     }
 
     if (this.props.error) {
