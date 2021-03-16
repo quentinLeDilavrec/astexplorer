@@ -236,7 +236,13 @@ function preprocess(x: NonNullable<GraphP["graph"]>, state: any = {}) {
     let fileId: number;
     if (file) {
       fileId = file.id;
-      if (file.isTestFile && file.isTestFile !== x["isInTestCu"]) {
+      if (file.isTestFile === undefined) {
+        file.isTestFile = x["isInTestCu"];
+      } else if (
+        file.isTestFile !== undefined &&
+        x["isInTestCu"] !== undefined &&
+        file.isTestFile !== x["isInTestCu"]
+      ) {
         console.error("wrong file isTest value");
       }
     } else {
@@ -697,7 +703,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
             if (d.value.type === "Method") {
               return NODE_SIZE;
             } else if (d.value.type === "Constructor") {
-              return NODE_SIZE/1.5;
+              return NODE_SIZE / 1.5;
             }
             return NODE_SIZE / 2;
           })
