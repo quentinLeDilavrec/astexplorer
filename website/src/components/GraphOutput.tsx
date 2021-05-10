@@ -108,6 +108,8 @@ export default function EvoGraphOutput(props: PT) {
   function handleOnScreenShot(...x:[event: React.MouseEvent<HTMLSpanElement, MouseEvent>]) {
     return onScreenShot && onScreenShot(...x)
   }
+  let afterB:HTMLButtonElement
+  let isAfter = false
   return (
     <div className="output highlight">
       <div className="toolbar">
@@ -125,6 +127,23 @@ export default function EvoGraphOutput(props: PT) {
             return onReCentering && onReCentering(...x);
           }}
         ></span>
+        <button
+          className="time"
+          style={{
+            minWidth: '1px',
+            height: '20px',
+            backgroundColor: 'lightgray',
+            }}
+          onClick={x=> {
+            if (isAfter) {
+              isAfter = false
+              afterB.style.backgroundColor = "lightgray"
+            } else {
+              isAfter = true
+              afterB.style.backgroundColor = "darkgray"
+            }}}
+          ref={(x) => (x ? (afterB = x) : undefined)}
+        >after</button>
       </div>
       {output}
     </div>

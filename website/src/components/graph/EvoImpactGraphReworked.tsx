@@ -486,7 +486,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
                 }
                 return NODE_SIZE * 1.7;
               })
-              .strength((d) => ("start" in d.target.value ? 0.95 : 0.2))
+              .strength((d) => ("start" in d.target.value ? 0.95 : 0.5))
           )
           .force("centering", d3.forceCenter(width / 2, height / 2));
         graphLayout.restart();
@@ -865,6 +865,14 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
           .on("end", dragended)
       );
 
+      files.call(
+        d3
+          .drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended)
+      );
+
       nodes.on("dblclick", dblclick);
       nodes.on("mouseover.highlight", (d) => {
         // PubSub.publish('HIGHLIGHT_DIFF', { node: {side:'left'}, range: [d.value.start, d.value.end] });
@@ -1106,6 +1114,7 @@ export default class EvoImpactGraphReworked extends Component<GraphP, S> {
         d.fx = d3.event.x;
         d.fy = d3.event.y;
       }
+
       function dragended(d) {
         if (!d3.event.active) graphLayout.alphaTarget(0);
         if (FIX_AFTER_DRAG) {
